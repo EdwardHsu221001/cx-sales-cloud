@@ -196,6 +196,7 @@
   align-items: center;
   gap: 9px;
   padding: 8px 9px;
+  text-decoration: none;
   border-radius: 8px;
   cursor: pointer;
   color: #aebdd4;
