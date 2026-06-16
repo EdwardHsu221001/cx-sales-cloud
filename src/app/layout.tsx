@@ -6,7 +6,7 @@ import './crm.css'
 const outfit = Outfit({
   variable: '--font-outfit',
   subsets: ['latin'],
-  weight: ['400', '500'],
+  weight: ['400', '700'],
 })
 
 export const metadata: Metadata = {

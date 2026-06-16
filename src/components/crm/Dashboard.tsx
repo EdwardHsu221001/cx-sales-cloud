@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'motion/react'
+import Leads from './Leads'
+import Opportunities from './Opportunities'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type NavView =
@@ -381,7 +383,7 @@ export default function Dashboard() {
         <div className="cx-nav-label">銷售</div>
         {[
           { view: 'home' as NavView,       label: '首頁',     Icon: IconHome },
-          { view: 'leads' as NavView,      label: '潛在客戶', Icon: IconLeads,      badge: '18' },
+          { view: 'leads' as NavView,      label: '潛在客戶', Icon: IconLeads,      badge: '32' },
           { view: 'accounts' as NavView,   label: '客戶帳號', Icon: IconAccounts },
           { view: 'contacts' as NavView,   label: '聯絡人',   Icon: IconContacts },
           { view: 'opps' as NavView,       label: '商機',     Icon: IconOpps,       fav: true },
@@ -427,6 +429,10 @@ export default function Dashboard() {
               setQuickMenuOpen={setQuickMenuOpen}
               quickMenuRef={quickMenuRef}
             />
+          ) : activeView === 'leads' ? (
+            <Leads showToast={showToast} />
+          ) : activeView === 'opps' ? (
+            <Opportunities showToast={showToast} />
           ) : (
             <EmptyState view={activeView} />
           )}
