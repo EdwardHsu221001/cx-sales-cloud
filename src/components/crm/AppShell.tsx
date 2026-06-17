@@ -53,7 +53,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* ── Sidebar ── */}
       <aside className="cx-sidebar">
         <div className="cx-nav-label">銷售</div>
-        {NAV_ITEMS.map(({ href, label, Icon, badge, fav }) => (
+        {NAV_ITEMS.map(({ href, label, Icon, ...rest }) => {
+          const badge = 'badge' in rest ? rest.badge : undefined
+          const fav   = 'fav'   in rest ? rest.fav   : undefined
+          return (
           <Link
             key={href}
             href={href}
@@ -64,7 +67,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {badge && <span className="cx-nav-badge">{badge}</span>}
             {fav   && <span className="cx-nav-fav">✦</span>}
           </Link>
-        ))}
+        )})}
         <div className="cx-nav-divider" />
         <Link
           href="/settings"

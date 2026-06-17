@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'motion/react'
 import Leads from './Leads'
 import Opportunities from './Opportunities'
+import Accounts from './Accounts'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type NavView =
@@ -431,6 +432,8 @@ export default function Dashboard() {
             />
           ) : activeView === 'leads' ? (
             <Leads showToast={showToast} />
+          ) : activeView === 'accounts' ? (
+            <Accounts showToast={showToast} />
           ) : activeView === 'opps' ? (
             <Opportunities showToast={showToast} />
           ) : (
