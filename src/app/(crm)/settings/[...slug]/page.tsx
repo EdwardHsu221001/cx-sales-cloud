@@ -11,7 +11,7 @@ function IconCheck() {
   )
 }
 
-export default function SettingsPage() {
+export default function SettingsSlugPage() {
   const [toast, setToast] = useState({ visible: false, msg: '' })
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
