@@ -1033,56 +1033,52 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
           </button>
         </div>
 
-        <div className="cx-omgmt-grid">
-          {filtered.map(obj => {
-            const ic = OBJ_ICON_STYLE[obj.g]
-            return (
-              <div key={obj.api} className="cx-omgmt-card">
-                <div className="cx-omgmt-card-head">
-                  <div className="cx-omgmt-icon" style={{ background:ic.bg, color:ic.color }}>{obj.icon}</div>
-                  <div className="cx-omgmt-card-id">
-                    <div className="nm">{obj.nm}</div>
-                    <div className="api">{obj.api}</div>
-                  </div>
-                  <button className="cx-dw-iconbtn" style={{ marginLeft:'auto', flexShrink:0 }} title="更多" onClick={() => showToast(`${obj.nm} 設定選單`)}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/>
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="cx-omgmt-stats">
-                  <div className="cx-omgmt-stat">
-                    <div className="v">{obj.records.toLocaleString()}</div>
-                    <div className="l">紀錄數</div>
-                  </div>
-                  <div className="cx-omgmt-stat-div" />
-                  <div className="cx-omgmt-stat">
-                    <div className="v">{obj.fields}</div>
-                    <div className="l">欄位數</div>
-                  </div>
-                </div>
-
-                <div className="cx-omgmt-card-foot">
-                  <button
-                    className="cx-btn-outline"
-                    style={{ fontSize:12, padding:'6px 12px', flex:1 }}
-                    onClick={() => router.push(`/settings/objects/${obj.api}`)}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:13, height:13 }}>
-                      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
-                    </svg>
-                    欄位 Fields
-                  </button>
-                  {!obj.std && <span className="cx-tag-inline custom">自訂</span>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        <div style={{ marginTop:16, fontSize:'12px', color:'var(--cx-text-faint)', textAlign:'center' }}>
-          共 {filtered.length} 個{objTab === 'std' ? '標準' : '自訂'}物件
+        <div className="cx-data-card">
+          <table className="cx-dt">
+            <colgroup>
+              <col />
+              <col />
+              <col />
+              <col />
+              <col />
+              <col style={{ width:48 }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>物件</th>
+                <th>API Name</th>
+                <th>類型</th>
+                <th>紀錄數</th>
+                <th>欄位</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(obj => {
+                const ic = OBJ_ICON_STYLE[obj.g]
+                return (
+                  <tr key={obj.api} onClick={() => router.push(`/settings/objects/${obj.api}`)}>
+                    <td>
+                      <div style={{ display:'flex', alignItems:'center', gap:11 }}>
+                        <div className="cx-omgmt-icon" style={{ background:ic.bg, color:ic.color, width:36, height:36, borderRadius:10, fontSize:13, flexShrink:0 }}>{obj.icon}</div>
+                        <div style={{ fontWeight:500, fontSize:13 }}>{obj.nm}</div>
+                      </div>
+                    </td>
+                    <td style={{ fontFamily:'monospace', fontSize:11.5, color:'var(--cx-text-sub)' }}>{obj.api}</td>
+                    <td><span className={`cx-tag-inline${!obj.std ? ' custom' : ''}`}>{obj.std ? '標準' : '自訂'}</span></td>
+                    <td style={{ color:'var(--cx-text-sub)' }}>{obj.records.toLocaleString()}</td>
+                    <td style={{ color:'var(--cx-text-sub)', fontSize:12.5 }}>
+                      {obj.fields} 個{obj.customFields > 0 && <span style={{ color:'var(--cx-text-faint)', marginLeft:4 }}>({obj.customFields} 自訂)</span>}
+                    </td>
+                    <td><div className="cx-row-arr"><ChevRight /></div></td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          <div className="cx-pager">
+            <div className="info">共 <b>{filtered.length}</b> 個{objTab === 'std' ? '標準' : '自訂'}物件</div>
+          </div>
         </div>
       </div>
     )

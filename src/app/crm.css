@@ -2131,6 +2131,7 @@ table.cx-ct-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
 table.cx-dt { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .cx-dt thead th { font-size: 11px; letter-spacing: .4px; text-transform: uppercase; color: var(--cx-text-faint); font-weight: 500; text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--cx-border); background: #FBFCFD; }
 .cx-dt thead th.num { text-align: right; }
+.cx-dt tbody td.num { text-align: right; }
 .cx-dt tbody td { padding: 12px 14px; border-bottom: 1px solid var(--cx-border-soft); font-size: 13px; vertical-align: middle; overflow: hidden; }
 .cx-dt tbody tr:last-child td { border-bottom: none; }
 .cx-dt tbody tr { transition: background .12s; cursor: pointer; }
@@ -2280,21 +2281,7 @@ table.cx-dt { width: 100%; border-collapse: collapse; table-layout: fixed; }
 /* settings snum weight override */
 .cx-settings-shell .cx-snum { font-weight: 500; }
 
-/* ── Settings: Object Manager card grid ──────────────────────────────────── */
-.cx-omgmt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.cx-omgmt-card {
-  background: #fff;
-  border: 1px solid var(--cx-border);
-  border-radius: var(--cx-radius);
-  box-shadow: var(--cx-shadow);
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  transition: border-color .15s, box-shadow .15s, transform .12s;
-}
-.cx-omgmt-card:hover { border-color: #cfe0fd; box-shadow: 0 4px 18px rgba(23,45,74,.1); transform: translateY(-1px); }
-.cx-omgmt-card-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* ── Settings: Object Manager icon (shared with fields page) ─────────────── */
 .cx-omgmt-icon {
   width: 42px;
   height: 42px;
@@ -2305,21 +2292,6 @@ table.cx-dt { width: 100%; border-collapse: collapse; table-layout: fixed; }
   font-weight: 500;
   flex-shrink: 0;
 }
-.cx-omgmt-card-id { flex: 1; min-width: 0; }
-.cx-omgmt-card-id .nm { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cx-omgmt-card-id .api { font-size: 11px; color: var(--cx-text-faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cx-omgmt-stats {
-  display: flex;
-  align-items: stretch;
-  background: var(--cx-bg);
-  border-radius: 9px;
-  overflow: hidden;
-}
-.cx-omgmt-stat { flex: 1; padding: 10px 14px; text-align: center; }
-.cx-omgmt-stat .v { font-size: 22px; font-weight: 700; letter-spacing: -.4px; line-height: 1; }
-.cx-omgmt-stat .l { font-size: 10.5px; color: var(--cx-text-faint); margin-top: 5px; font-weight: 500; letter-spacing: .2px; }
-.cx-omgmt-stat-div { width: 1px; background: var(--cx-border); flex-shrink: 0; align-self: stretch; }
-.cx-omgmt-card-foot { display: flex; align-items: center; gap: 8px; }
 
 /* ── Settings: Fields page sub-tabs ─────────────────────────────────────── */
 .cx-page-tabs {
