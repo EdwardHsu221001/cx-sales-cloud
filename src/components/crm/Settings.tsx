@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, Fragment } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { IconSearch } from './icons'
 
@@ -28,6 +28,7 @@ function IconGroupObjects()   { return <svg viewBox="0 0 24 24" fill="none" stro
 function IconGroupUI()        { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> }
 function IconGroupAuto()      { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z"/></svg> }
 function IconGroupIntegration(){ return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 2v6M15 2v6M7 8h10v3a5 5 0 0 1-10 0Z"/><path d="M12 16v6"/></svg> }
+function MonitorIcon()  { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-6"/></svg> }
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const GRAD: Record<string, string> = {
@@ -111,6 +112,260 @@ const PERM_ASSIGNED: Record<string, number[]> = {
   '報表匯出':[0,1,2,3,4], '商機刪除':[0,1], 'API 存取':[1,2], '大量匯入精靈':[1,3], 'Cisco 整合':[1,6], '行銷活動管理':[2,3],
 }
 
+// ── Flow Data ────────────────────────────────────────────────────────────────
+type FlowTrig = 'record' | 'schedule' | 'screen'
+const FLOW_TRIGGER: Record<FlowTrig, { lbl: string; tag: string; kind: string }> = {
+  record:   { lbl:'記錄觸發', tag:'記錄觸發', kind:'記錄觸發 · 啟動' },
+  schedule: { lbl:'排程',     tag:'排程',     kind:'排程 · 啟動' },
+  screen:   { lbl:'畫面流程', tag:'畫面流程', kind:'畫面流程 · 啟動' },
+}
+interface DiagramStep {
+  start?: boolean; end?: boolean; stop?: boolean; decision?: boolean
+  ic?: string; label: string; sub?: string; trig?: FlowTrig
+  yes?: DiagramStep[]; no?: DiagramStep[]
+}
+interface FlowItem {
+  name: string; api: string; trig: FlowTrig; obj: string; desc: string
+  on: boolean; ver: number; runs7: number; fail7: number
+  lm: { av: string; g: string; name: string; date: string }
+  diagram: DiagramStep[]
+}
+const FLOWS: FlowItem[] = [
+  { name:'商機結案自動建立續約', api:'Opportunity_Won_Renewal', trig:'record', obj:'商機 Opportunity',
+    desc:'當商機階段變更為「結案 — 贏單」且含保固類產品時，自動建立續約商機並通知負責業務。',
+    on:true, ver:4, runs7:842, fail7:0, lm:{ av:'王', g:'navy', name:'王淑芬', date:'2026/06/12' },
+    diagram:[
+      { start:true, trig:'record', label:'商機 Opportunity', sub:'階段變更為 結案-贏單 時' },
+      { ic:'get', label:'取得商機產品明細', sub:'OpportunityLineItem' },
+      { decision:true, label:'含保固類產品？', sub:'Product.Family = Warranty',
+        yes:[{ ic:'create', label:'建立續約商機', sub:'到期前 90 天' }, { ic:'action', label:'通知負責業務', sub:'Email + 站內通知' }],
+        no:[{ end:true, label:'結束 — 不處理' }] },
+    ] },
+  { name:'高額折扣自動送審', api:'Quote_Discount_Approval', trig:'record', obj:'報價單 Quote',
+    desc:'報價單建立或編輯時，比對提交者角色折扣上限，超限自動送出審核給上層主管。',
+    on:true, ver:7, runs7:1310, fail7:6, lm:{ av:'陳', g:'green', name:'陳小明', date:'2026/06/15' },
+    diagram:[
+      { start:true, trig:'record', label:'報價單 Quote', sub:'建立或更新時' },
+      { ic:'get', label:'取得提交者角色上限', sub:'Role.DiscountCap__c' },
+      { decision:true, label:'折扣 > 角色上限？',
+        yes:[{ ic:'action', label:'送出審核給上層主管', sub:'Approval Process' }, { ic:'update', label:'標記狀態 = 審核中' }],
+        no:[{ ic:'update', label:'標記狀態 = 已核准' }, { end:true, label:'自動核准' }] },
+    ] },
+  { name:'新名單自動指派業務', api:'Lead_Auto_Assignment', trig:'record', obj:'名單 Lead',
+    desc:'名單建立時依來源與地區，套用指派規則分派給對應業務團隊並記錄指派時間。',
+    on:true, ver:2, runs7:476, fail7:0, lm:{ av:'林', g:'violet', name:'林雅婷', date:'2026/05/28' },
+    diagram:[
+      { start:true, trig:'record', label:'名單 Lead', sub:'建立時' },
+      { ic:'get', label:'取得地區業務團隊', sub:'依 Lead.Region__c' },
+      { decision:true, label:'名單來源 = 官網？',
+        yes:[{ ic:'assign', label:'指派給內勤業務', sub:'Inbound 隊列' }],
+        no:[{ ic:'assign', label:'指派給區域外勤業務' }] },
+      { ic:'update', label:'記錄指派時間', sub:'AssignedAt__c = NOW()' },
+    ] },
+  { name:'每日逾期商機提醒', api:'Daily_Stale_Opp_Reminder', trig:'schedule', obj:'排程 · 每日 08:00',
+    desc:'每日早晨掃描逾 14 天未更新的進行中商機，彙整摘要寄送給負責業務與其主管。',
+    on:true, ver:3, runs7:7, fail7:0, lm:{ av:'王', g:'navy', name:'王淑芬', date:'2026/06/01' },
+    diagram:[
+      { start:true, trig:'schedule', label:'每日 08:00', sub:'Scheduled Flow' },
+      { ic:'get', label:'取得逾期商機', sub:'14 天未更新 · 進行中' },
+      { decision:true, label:'有逾期商機？',
+        yes:[{ ic:'action', label:'寄送摘要 Email', sub:'分組寄給各負責業務' }],
+        no:[{ end:true, label:'結束 — 無待辦' }] },
+    ] },
+  { name:'報價單產生畫面流程', api:'Quote_Builder_Screen', trig:'screen', obj:'畫面流程 · 使用者啟動',
+    desc:'引導業務逐步選擇產品、套用價目表與折扣規則，並在確認後建立報價單。',
+    on:true, ver:5, runs7:318, fail7:1, lm:{ av:'陳', g:'green', name:'陳小明', date:'2026/06/10' },
+    diagram:[
+      { start:true, trig:'screen', label:'使用者啟動', sub:'商機頁面按鈕' },
+      { ic:'screen', label:'選擇產品與數量' },
+      { ic:'get', label:'取得價目表與折扣規則' },
+      { ic:'screen', label:'確認報價明細' },
+      { ic:'create', label:'建立報價單', sub:'Quote + QuoteLineItem' },
+      { end:true, label:'完成' },
+    ] },
+  { name:'Cisco 保固到期通知', api:'Cisco_Warranty_Expiry', trig:'schedule', obj:'排程 · 每日 07:00',
+    desc:'每日呼叫 Cisco API 同步保固狀態，對 90 天內到期者建立續約行動項目並通知客戶經理。',
+    on:true, ver:1, runs7:7, fail7:5, lm:{ av:'王', g:'navy', name:'王淑芬', date:'2026/06/16' },
+    diagram:[
+      { start:true, trig:'schedule', label:'每日 07:00', sub:'Scheduled Flow' },
+      { ic:'action', label:'呼叫 Cisco 保固 API', sub:'External Service' },
+      { decision:true, label:'90 天內到期？',
+        yes:[{ ic:'create', label:'建立續約行動項目', sub:'CallToAction__c' }, { ic:'action', label:'通知客戶經理' }],
+        no:[{ end:true, label:'結束' }] },
+    ] },
+  { name:'客戶滿意度調查', api:'CSAT_Survey_OnClose', trig:'screen', obj:'服務案件 Case',
+    desc:'服務案件結案後彈出滿意度問卷，並將評分寫回案件。目前為草稿，尚未啟用。',
+    on:false, ver:1, runs7:0, fail7:0, lm:{ av:'林', g:'violet', name:'林雅婷', date:'2026/06/14' },
+    diagram:[
+      { start:true, trig:'screen', label:'案件結案後', sub:'草稿 Draft' },
+      { ic:'screen', label:'滿意度問卷', sub:'CSAT 1–5 分' },
+      { ic:'update', label:'寫回案件評分', sub:'Case.CSAT__c' },
+      { end:true, label:'完成' },
+    ] },
+]
+type RunEntry = { ok: number; t: string; d: string; time: string; dur: string }
+const FLOW_RUNS: Record<number | 'default', RunEntry[]> = {
+  default: [
+    { ok:1, t:'執行成功', d:'處理 1 筆記錄，2 個元素已執行。', time:'今天 14:22', dur:'0.42s' },
+    { ok:1, t:'執行成功', d:'處理 1 筆記錄，2 個元素已執行。', time:'今天 11:08', dur:'0.39s' },
+    { ok:1, t:'執行成功', d:'處理 1 筆記錄。',                 time:'今天 09:51', dur:'0.51s' },
+    { ok:1, t:'執行成功', d:'處理 1 筆記錄。',                 time:'昨天 17:30', dur:'0.44s' },
+  ],
+  1: [
+    { ok:0, t:'執行失敗', d:'動作「送出審核」失敗：找不到提交者的上層主管（Manager 欄位為空）。', time:'今天 13:15', dur:'0.88s' },
+    { ok:1, t:'執行成功', d:'折扣 22% 超限，已送審核給 王淑芬。',                               time:'今天 12:40', dur:'0.55s' },
+    { ok:0, t:'執行失敗', d:'動作「送出審核」失敗：找不到提交者的上層主管（Manager 欄位為空）。', time:'今天 10:02', dur:'0.91s' },
+    { ok:1, t:'執行成功', d:'折扣 8%，未超限，自動核准。',                                       time:'今天 09:18', dur:'0.33s' },
+  ],
+  5: [
+    { ok:0, t:'執行失敗', d:'呼叫 Cisco 保固 API 逾時（10s）— External Service「CiscoWarranty」未回應。', time:'今天 07:00', dur:'10.0s' },
+    { ok:0, t:'執行失敗', d:'呼叫 Cisco 保固 API 逾時（10s）。',                                          time:'昨天 07:00', dur:'10.0s' },
+    { ok:0, t:'執行失敗', d:'HTTP 401 — API 金鑰已過期，請至「系統整合 › API 設定」更新。',               time:'06/15 07:00', dur:'1.2s' },
+    { ok:0, t:'執行失敗', d:'HTTP 401 — API 金鑰已過期。',                                               time:'06/14 07:00', dur:'1.1s' },
+  ],
+}
+type VerEntry = { v: string; active: boolean; date: string; by: string; note: string }
+const FLOW_VERSIONS: Record<number | 'default', VerEntry[]> = {
+  default: [
+    { v:'目前版本', active:true,  date:'2026/06/12', by:'王淑芬', note:'調整通知收件人，新增主管副本。' },
+    { v:'v3',       active:false, date:'2026/04/30', by:'王淑芬', note:'加入保固產品判斷條件。' },
+    { v:'v2',       active:false, date:'2026/02/18', by:'陳小明', note:'初版上線。' },
+  ],
+  1: [
+    { v:'目前版本', active:true,  date:'2026/06/15', by:'陳小明', note:'依角色折扣上限改寫判斷，串接審核流程。' },
+    { v:'v6',       active:false, date:'2026/05/20', by:'陳小明', note:'新增「已核准」狀態回寫。' },
+    { v:'v5',       active:false, date:'2026/03/11', by:'王淑芬', note:'調整審核路由規則。' },
+  ],
+  5: [
+    { v:'目前版本', active:true, date:'2026/06/16', by:'王淑芬', note:'串接 Cisco 保固 API（External Service）。' },
+  ],
+}
+
+// ── Import Batch Data ────────────────────────────────────────────────────────
+type ImpSrc    = 'csv' | 'api' | 'manual'
+type ImpStatus = 'scheduled' | 'processing' | 'completed' | 'partial' | 'failed' | 'queued'
+const IMP_SOURCE: Record<ImpSrc, { tag: string }> = {
+  csv:    { tag:'CSV 上傳' },
+  api:    { tag:'API 同步' },
+  manual: { tag:'手動上傳' },
+}
+const IMP_STATUS: Record<ImpStatus, { cls: string; lbl: string }> = {
+  scheduled:  { cls:'active',   lbl:'排程中'   },
+  processing: { cls:'proc',     lbl:'處理中'   },
+  completed:  { cls:'active',   lbl:'完成'     },
+  partial:    { cls:'pending',  lbl:'部分失敗' },
+  failed:     { cls:'inactive', lbl:'失敗'     },
+  queued:     { cls:'queue',    lbl:'排隊中'   },
+}
+const IMP_RULES = [
+  { l:'重複比對欄位', v:'Email · 統一編號' },
+  { l:'重複處理方式', v:'更新既有紀錄（Upsert）' },
+  { l:'批次大小',     v:'每批 200 筆' },
+  { l:'錯誤門檻',     v:'失敗 > 10% 自動中止' },
+  { l:'預設負責人',   v:'依指派規則 / 上傳者' },
+  { l:'完成通知',     v:'Email 通知上傳者與管理員' },
+]
+interface BatchItem {
+  name: string; file: string; obj: string; src: ImpSrc; freq: string
+  status: ImpStatus; sched: boolean; on: boolean
+  total: number; ok: number; err: number; skip: number; prog?: number
+  by: { av: string; g: string; name: string; date: string }
+  dur: string; failReason?: string
+}
+const BATCHES: BatchItem[] = [
+  { name:'每日潛客匯入', file:'leads_daily.csv', obj:'名單 Lead', src:'api', freq:'排程 · 每日 02:00',
+    status:'scheduled', sched:true, on:true, total:128, ok:128, err:0, skip:4,
+    by:{av:'系',g:'navy',name:'系統排程',date:'今天 02:00'}, dur:'14s' },
+  { name:'ERP 客戶同步', file:'SAP OData', obj:'客戶帳號 Account', src:'api', freq:'排程 · 每 6 小時',
+    status:'scheduled', sched:true, on:true, total:42, ok:42, err:0, skip:8,
+    by:{av:'系',g:'navy',name:'系統排程',date:'今天 06:00'}, dur:'9s' },
+  { name:'Cisco 保固清單匯入', file:'cisco_warranty_q2.csv', obj:'保固續約 Cisco_Warranty_Renewal__c', src:'manual', freq:'一次性',
+    status:'processing', sched:false, on:false, total:1240, ok:794, err:6, skip:0, prog:64,
+    by:{av:'王',g:'navy',name:'王淑芬',date:'今天 14:38'}, dur:'進行中' },
+  { name:'行銷名單匯入（展會）', file:'expo2026_leads.xlsx', obj:'名單 Lead', src:'manual', freq:'一次性',
+    status:'completed', sched:false, on:false, total:560, ok:548, err:0, skip:12,
+    by:{av:'林',g:'violet',name:'林雅婷',date:'昨天 16:20'}, dur:'31s' },
+  { name:'歷史商機匯入', file:'opps_2024_archive.csv', obj:'商機 Opportunity', src:'csv', freq:'一次性',
+    status:'partial', sched:false, on:false, total:312, ok:309, err:3, skip:0,
+    by:{av:'陳',g:'green',name:'陳小明',date:'06/16 11:02'}, dur:'22s' },
+  { name:'聯絡人批次更新', file:'contacts_update.csv', obj:'聯絡人 Contact', src:'csv', freq:'一次性',
+    status:'failed', sched:false, on:false, total:0, ok:0, err:0, skip:0,
+    by:{av:'林',g:'violet',name:'林雅婷',date:'06/16 09:45'}, dur:'—',
+    failReason:'檔案編碼非 UTF-8，且第 1 列標頭與欄位對應不符，匯入未啟動。' },
+  { name:'產品價目表匯入', file:'pricebook_2026h2.csv', obj:'產品 Product2', src:'csv', freq:'一次性',
+    status:'queued', sched:false, on:false, total:86, ok:0, err:0, skip:0,
+    by:{av:'王',g:'navy',name:'王淑芬',date:'今天 14:51'}, dur:'排隊中' },
+]
+type ImpErrEntry = { row: number; id: string; reason: string }
+const IMP_ERRORS: Record<number, ImpErrEntry[]> = {
+  2: [
+    { row:118, id:'CSCO-2291', reason:'保固到期日格式錯誤（應為 YYYY-MM-DD）。' },
+    { row:204, id:'CSCO-2310', reason:'關聯帳號「鴻博科技」查無對應 Account。' },
+    { row:377, id:'CSCO-2402', reason:'Cisco 合約號重複，已存在相同紀錄。' },
+  ],
+  4: [
+    { row:57,  id:'OPP-2024-0571', reason:'金額欄位為空，必填欄位驗證失敗。' },
+    { row:142, id:'OPP-2024-1183', reason:'階段「Closed」非有效選項清單值。' },
+    { row:288, id:'OPP-2024-2240', reason:'負責業務 Email 查無對應使用者。' },
+  ],
+}
+type MapRow = [string, string, string, 'ok' | 'skip']
+const IMP_MAPPING: Record<number | 'default', MapRow[]> = {
+  default: [
+    ['name',   '名稱', 'Name',       'ok'],
+    ['email',  'Email','Email',      'ok'],
+    ['company','公司', 'Company',    'ok'],
+    ['phone',  '電話', 'Phone',      'ok'],
+    ['source', '來源', 'LeadSource', 'ok'],
+    ['notes',  '—',   '—',          'skip'],
+  ],
+  2: [
+    ['contract_no', 'Cisco 合約號','Cisco_Contract_No__c','ok'],
+    ['account',     '關聯帳號',   'Account__c',         'ok'],
+    ['warranty_end','保固到期日', 'Warranty_End__c',    'ok'],
+    ['amount',      '續約金額',   'Renewal_Amount__c',  'ok'],
+    ['status',      '續約狀態',   'Renewal_Status__c',  'ok'],
+    ['internal_id', '—',         '—',                  'skip'],
+  ],
+  4: [
+    ['opp_name',   '商機名稱', 'Name',      'ok'],
+    ['amount',     '金額',     'Amount',    'ok'],
+    ['stage',      '階段',     'StageName', 'ok'],
+    ['close_date', '預計關閉日','CloseDate', 'ok'],
+    ['owner_email','負責業務', 'OwnerId',   'ok'],
+    ['legacy_note','—',       '—',         'skip'],
+  ],
+}
+
+type ImpRecEntry = { id: string; name: string; status: 'ok' | 'skip' | 'err'; note?: string }
+const IMP_RECORDS: Record<number | 'default', ImpRecEntry[]> = {
+  default: [
+    { id:'LEAD-0042', name:'張庭瑋 / 宏立科技',   status:'ok' },
+    { id:'LEAD-0043', name:'李孟潔 / 優思資訊',   status:'ok' },
+    { id:'LEAD-0044', name:'王柏宇 / 鼎新電腦',   status:'skip', note:'重複 Email — 已 Upsert 更新' },
+    { id:'LEAD-0045', name:'陳怡安 / 凱基系統',   status:'ok' },
+    { id:'LEAD-0046', name:'林志豪 / 聯華電子',   status:'ok' },
+  ],
+  1: [
+    { id:'ACC-1201', name:'宏立科技股份有限公司', status:'ok' },
+    { id:'ACC-1202', name:'優思資訊有限公司',     status:'ok' },
+    { id:'ACC-1203', name:'鼎新電腦股份有限公司', status:'ok' },
+  ],
+  2: [
+    { id:'LEAD-0051', name:'劉怡婷 / 英業達',   status:'ok' },
+    { id:'LEAD-0052', name:'陳冠宏 / 仁寶電腦', status:'err',  note:'缺少必填欄位「公司」' },
+    { id:'LEAD-0053', name:'吳佩儀 / 廣達電腦', status:'ok' },
+    { id:'LEAD-0054', name:'黃俊豪 / 和碩聯合', status:'skip', note:'重複 Email — 已 Upsert 更新' },
+    { id:'LEAD-0055', name:'許雅涵 / 微星科技', status:'ok' },
+  ],
+  4: [
+    { id:'OPP-0841', name:'宏立科技-ERP導入案',   status:'ok' },
+    { id:'OPP-0842', name:'優思資訊-雲端續約',   status:'ok' },
+    { id:'OPP-0843', name:'鼎新電腦-資安方案',   status:'err',  note:'必填欄位「預計關閉日」格式錯誤' },
+    { id:'OPP-0844', name:'凱基系統-網路設備採購', status:'ok' },
+  ],
+}
+
 // ── Nav groups ────────────────────────────────────────────────────────────────
 interface NavItem { key: string; label: string; cnt?: string; ph?: boolean }
 interface NavGroup { label: string; icon: React.ReactNode; items: NavItem[] }
@@ -131,13 +386,13 @@ const NAV_GROUPS: NavGroup[] = [
     { key:'tabs',       label:'Tab 與導覽',            ph:true },
   ]},
   { label:'業務自動化', icon:<IconGroupAuto/>, items:[
-    { key:'flow',     label:'自動化流程 Flow', ph:true },
+    { key:'flow',     label:'自動化流程 Flow' },
     { key:'approval', label:'審核流程',        ph:true },
     { key:'workflow', label:'工作流程規則',    ph:true },
   ]},
   { label:'系統整合', icon:<IconGroupIntegration/>, items:[
     { key:'api',    label:'API 設定（Cisco 等）', ph:true },
-    { key:'import', label:'匯入批次設定',          ph:true },
+    { key:'import', label:'匯入批次設定' },
     { key:'email',  label:'郵件設定',              ph:true },
   ]},
 ]
@@ -265,11 +520,11 @@ function PlaceholderCell({ cell }: { cell: string }) {
 }
 
 // ── Detail Drawer ─────────────────────────────────────────────────────────────
-interface DrawerState { open: boolean; type: 'user'|'profile'|'permset'; index: number; tab: string }
+interface DrawerState { open: boolean; type: 'user'|'profile'|'permset'|'flow'|'batch'; index: number; tab: string }
 
 function DetailDrawer({
   state, onClose, onStep, onTabChange, showToast,
-  toggleStates, onToggle,
+  toggleStates, onToggle, flowOn, onFlowToggle, batchOn, onBatchToggle,
 }: {
   state: DrawerState
   onClose: () => void
@@ -278,10 +533,14 @@ function DetailDrawer({
   showToast: (msg: string) => void
   toggleStates: Record<string, boolean>
   onToggle: (key: string) => void
+  flowOn: Record<number, boolean>
+  onFlowToggle: (i: number) => void
+  batchOn: Record<number, boolean>
+  onBatchToggle: (i: number) => void
 }) {
   if (!state.open) return null
 
-  const len = state.type === 'user' ? USERS.length : state.type === 'profile' ? PROFILES.length : PERMSETS.length
+  const len = state.type === 'user' ? USERS.length : state.type === 'profile' ? PROFILES.length : state.type === 'flow' ? FLOWS.length : state.type === 'batch' ? BATCHES.length : PERMSETS.length
 
   function UserContent() {
     const u = USERS[state.index]
@@ -584,6 +843,420 @@ function DetailDrawer({
     )
   }
 
+  function FlowContent() {
+    const f = FLOWS[state.index]
+    const on = flowOn[state.index] ?? f.on
+    const runs = (FLOW_RUNS as Record<number | 'default', RunEntry[]>)[state.index] ?? FLOW_RUNS.default
+    const vers = (FLOW_VERSIONS as Record<number | 'default', VerEntry[]>)[state.index] ?? FLOW_VERSIONS.default
+    const okCount = runs.filter(r => r.ok).length
+    const successRate = runs.length ? Math.round((okCount / runs.length) * 100) : 100
+    const trigInfo = FLOW_TRIGGER[f.trig]
+
+    function TrigSvg({ k }: { k: FlowTrig | string }) {
+      if (k === 'record')   return <><path d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z"/></>
+      if (k === 'schedule') return <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>
+      return <><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></>
+    }
+    function NodeSvg({ k }: { k: string }) {
+      if (k === 'get')      return <><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></>
+      if (k === 'decision') return <path d="M12 3 21 12l-9 9-9-9Z" />
+      if (k === 'update')   return <><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></>
+      if (k === 'create')   return <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></>
+      if (k === 'action')   return <><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></>
+      if (k === 'screen')   return <><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></>
+      if (k === 'assign')   return <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></>
+      return null
+    }
+    const FKIND: Record<string, string> = { get:'取得記錄', update:'更新記錄', create:'建立記錄', action:'動作', screen:'畫面', assign:'指派', decision:'決策' }
+
+    function FNode({ s }: { s: DiagramStep }) {
+      if (s.start) return (
+        <div className="cx-fnode start">
+          <div className="cx-fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><TrigSvg k={s.trig!} /></svg></div>
+          <div className="cx-ftx"><div className="fl">{trigInfo.kind}</div><div className="ft">{s.label}</div>{s.sub && <div className="fs">{s.sub}</div>}</div>
+        </div>
+      )
+      if (s.end) return (
+        <div className={`cx-fnode end${s.stop ? ' stop' : ''}`}><span className="ed"/><span className="et">{s.label}</span></div>
+      )
+      const icCls = s.decision ? 'decision' : (s.ic || '')
+      return (
+        <div className={`cx-fnode${s.decision ? ' decision-node' : ''}`}>
+          <div className={`cx-fic ${icCls}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><NodeSvg k={icCls} /></svg></div>
+          <div className="cx-ftx"><div className="fl">{FKIND[icCls] || ''}</div><div className="ft">{s.label}</div>{s.sub && <div className="fs">{s.sub}</div>}</div>
+        </div>
+      )
+    }
+
+    function FlowDiagram({ steps }: { steps: DiagramStep[] }) {
+      return (
+        <div className="cx-fdiag">
+          {steps.map((s, i) => (
+            <Fragment key={i}>
+              {i > 0 && <div className="cx-fconn" />}
+              <FNode s={s} />
+              {s.decision && (
+                <>
+                  <div className="cx-fconn" />
+                  <div className="cx-fbranches">
+                    {s.yes && (
+                      <div className="cx-flane">
+                        <div className="cx-fblabel yes">是</div>
+                        {s.yes.map((n, j) => <Fragment key={j}><div className="cx-fconn short"/><FNode s={n} /></Fragment>)}
+                      </div>
+                    )}
+                    {s.no && (
+                      <div className="cx-flane">
+                        <div className="cx-fblabel no">否</div>
+                        {s.no.map((n, j) => <Fragment key={j}><div className="cx-fconn short"/><FNode s={n} /></Fragment>)}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </Fragment>
+          ))}
+        </div>
+      )
+    }
+
+    const tabDefs = [
+      { key:'overview', label:'概覽' },
+      { key:'versions', label:'版本' },
+      { key:'runs',     label:'執行紀錄' },
+    ]
+
+    return (
+      <>
+        <div className="cx-dw-top">
+          <div className="cx-dw-bar">
+            <span className="crumb" style={{ fontSize:'11.5px', color:'var(--cx-text-faint)', fontWeight:500 }}>
+              <b style={{ color:'var(--cx-text-sub)', fontWeight:500 }}>流程</b> ／ {f.name}
+            </span>
+            <div className="sp" style={{ flex:1 }} />
+            <button className="cx-dw-iconbtn" onClick={() => onStep(-1)}><ChevLeft /></button>
+            <button className="cx-dw-iconbtn" onClick={() => onStep(1)}><ChevRight /></button>
+            <button className="cx-dw-iconbtn" onClick={onClose}><XIcon /></button>
+          </div>
+          <div className="cx-dw-hero">
+            <div className={`cx-fl-tic ${f.trig} logo sq`} style={{ width:50, height:50, borderRadius:14 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:24, height:24 }}><TrigSvg k={f.trig} /></svg>
+            </div>
+            <div className="h-main" style={{ flex:1, minWidth:0 }}>
+              <h2 style={{ fontSize:17, fontWeight:600 }}>{f.name}</h2>
+              <div className="h-meta" style={{ display:'flex', gap:7, marginTop:6, flexWrap:'wrap' }}>
+                <span className={`cx-fl-type-tag ${f.trig}`}>{trigInfo.tag}</span>
+                <span className={`cx-status ${on ? 'active' : 'inactive'}`}>{on ? '啟用' : '停用'}</span>
+                {f.fail7 > 0 && <span className="cx-status inactive" style={{ background:'#FEF2F2', color:'#d6483f' }}>有失敗</span>}
+              </div>
+              <div className="h-sub">{f.desc}</div>
+            </div>
+          </div>
+          <div className="cx-dw-tabs">
+            {tabDefs.map(t => (
+              <div key={t.key} className={`cx-dw-tab ${state.tab === t.key ? 'on' : ''}`} onClick={() => onTabChange(t.key)}>{t.label}</div>
+            ))}
+          </div>
+        </div>
+        <div className="cx-dw-body">
+          {state.tab === 'overview' && (
+            <>
+              <div className="cx-dw-kpi">
+                <div className="k"><div className="v">{f.runs7.toLocaleString()}</div><div className="l">近 7 日執行</div></div>
+                <div className="k"><div className={`v${f.fail7 > 0 ? ' red' : ''}`}>{f.fail7}</div><div className="l">近 7 日失敗</div></div>
+                <div className="k"><div className="v">v{f.ver}</div><div className="l">目前版本</div></div>
+              </div>
+              {f.fail7 > 0 && (
+                <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:10, padding:'12px 14px', display:'flex', alignItems:'flex-start', gap:10, marginBottom:14 }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#d6483f" strokeWidth="2" style={{ width:16, height:16, flexShrink:0, marginTop:1 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <div style={{ fontSize:12.5, color:'#b91c1c', lineHeight:1.5 }}>近 7 日有 <b>{f.fail7}</b> 次執行失敗，請查閱執行紀錄以了解錯誤詳情。</div>
+                </div>
+              )}
+              <div className="cx-dw-sec">
+                <div className="sh"><h3>基本資訊</h3></div>
+                <div className="cx-info-grid">
+                  <div className="cell"><div className="cl">API Name</div><div className="cv" style={{ fontFamily:'monospace', fontSize:12 }}>{f.api}</div></div>
+                  <div className="cell"><div className="cl">觸發類型</div><div className="cv">{trigInfo.lbl}</div></div>
+                  <div className="cell full"><div className="cl">關聯物件</div><div className="cv">{f.obj}</div></div>
+                  <div className="cell"><div className="cl">最後修改</div><div className="cv">{f.lm.name} · {f.lm.date}</div></div>
+                  <div className="cell"><div className="cl">狀態</div>
+                    <div className="cv" style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <span className={`cx-fl-toggle${on ? '' : ' off'}`} onClick={() => onFlowToggle(state.index)} />
+                      <span style={{ fontSize:12.5, color:'var(--cx-text-sub)' }}>{on ? '啟用中' : '已停用'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="cx-dw-sec">
+                <div className="sh"><h3>流程圖</h3></div>
+                <div style={{ padding:'14px 16px' }}><FlowDiagram steps={f.diagram} /></div>
+              </div>
+            </>
+          )}
+          {state.tab === 'runs' && (
+            <div className="cx-dw-sec">
+              <div className="sh"><h3>近期執行</h3></div>
+              <div style={{ padding:'14px 16px 10px' }}>
+                <div style={{ fontSize:12, color:'var(--cx-text-sub)', marginBottom:6 }}>成功率 {successRate}%</div>
+                <div className="cx-rate-bar"><i style={{ width:`${successRate}%` }}/>{successRate < 100 && <span className="rb-fail" style={{ width:`${100-successRate}%` }}/>}</div>
+              </div>
+              {runs.map((r, i) => (
+                <div key={i} className="cx-run-row">
+                  <div className={`cx-run-st ${r.ok ? 'ok' : 'fail'}`}>
+                    {r.ok
+                      ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>}
+                  </div>
+                  <div className="cx-run-m">
+                    <div className="rt">{r.t}</div>
+                    <div className={`rd${r.ok ? '' : ' err'}`}>{r.d}</div>
+                  </div>
+                  <div className="cx-run-time">{r.time}<span className="dur">{r.dur}</span></div>
+                </div>
+              ))}
+            </div>
+          )}
+          {state.tab === 'versions' && (
+            <div className="cx-dw-sec">
+              <div className="sh"><h3>版本紀錄</h3></div>
+              {vers.map((v, i) => (
+                <div key={i} style={{ padding:'13px 16px', borderBottom: i < vers.length-1 ? '1px solid var(--cx-border-soft)' : 'none', display:'flex', gap:12 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                      <span style={{ fontSize:12.5, fontWeight:500 }}>{v.v}</span>
+                      {v.active && <span className="cx-status active" style={{ fontSize:10, padding:'1px 7px' }}>使用中</span>}
+                    </div>
+                    <div style={{ fontSize:12, color:'var(--cx-text-sub)', lineHeight:1.4 }}>{v.note}</div>
+                  </div>
+                  <div style={{ textAlign:'right', flexShrink:0, fontSize:11.5, color:'var(--cx-text-faint)', lineHeight:1.6 }}>
+                    <div>{v.date}</div>
+                    <div>{v.by}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </>
+    )
+  }
+
+  function BatchContent() {
+    const b = BATCHES[state.index]
+    const on = batchOn[state.index] ?? b.on
+    const src = IMP_SOURCE[b.src]
+    const st  = IMP_STATUS[b.status]
+    const errs    = IMP_ERRORS[state.index] || []
+    const mapping = (IMP_MAPPING as Record<number | 'default', MapRow[]>)[state.index] ?? IMP_MAPPING.default
+    const showErrTab = b.err > 0 || b.status === 'failed'
+    const okCount = mapping.filter(m => m[3] === 'ok').length
+
+    const IMP_SRC_ICON: Record<ImpSrc, React.ReactNode> = {
+      csv:    <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h2M8 17h2M14 13h2M14 17h2"/></>,
+      api:    <><path d="M16 18 22 12 16 6"/><path d="M8 6 2 12 8 18"/><path d="m14 4-4 16"/></>,
+      manual: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></>,
+    }
+    const SRC_BG: Record<ImpSrc, string> = { api:'#2563eb', manual:'#7c3aed', csv:'#16a34a' }
+
+    const objShort = b.obj.split(' ')[0]
+    const okV  = (b.status === 'failed' || b.status === 'queued') ? '—' : b.ok.toLocaleString()
+    const errV = (b.status === 'failed' || b.status === 'queued') ? '—' : String(b.err)
+
+    function StatusBlock() {
+      if (b.status === 'processing') return (
+        <div className="cx-dw-sec" style={{ marginBottom:14 }}>
+          <div className="sh" style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 16px', borderBottom:'1px solid var(--cx-border-soft)' }}>
+            <h3 style={{ fontSize:13, fontWeight:700 }}>匯入進度</h3>
+            <div style={{ flex:1 }} />
+            <span style={{ fontSize:12, fontWeight:500, color:'var(--cx-accent)' }}>{b.prog}%</span>
+          </div>
+          <div style={{ padding:'14px 16px 16px' }}>
+            <div className="cx-rate-bar"><i style={{ width:`${b.prog}%`, background:'linear-gradient(90deg,#60A5FA,#3B82F6)' }}/></div>
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:8, fontSize:11.5, color:'var(--cx-text-faint)' }}>
+              <span>已處理 {b.ok.toLocaleString()} / {b.total.toLocaleString()} 筆</span>
+              <span>預估剩餘 約 3 分鐘</span>
+            </div>
+          </div>
+        </div>
+      )
+      if (b.status === 'queued') return (
+        <div className="cx-disc-note" style={{ borderLeftColor:'var(--cx-accent)', background:'var(--cx-accent-soft)', marginBottom:14 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color:'var(--cx-accent)', width:16, height:16, flexShrink:0, marginTop:1 }}><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 2"/></svg>
+          <div>此批次正在排隊中，待前一批次完成後將自動開始匯入 <b>{b.total.toLocaleString()}</b> 筆資料。</div>
+        </div>
+      )
+      if (b.status === 'failed') return (
+        <div className="cx-disc-note" style={{ borderLeftColor:'var(--cx-danger)', background:'var(--cx-danger-soft)', marginBottom:14 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color:'#d6483f', width:16, height:16, flexShrink:0, marginTop:1 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div>{b.failReason}</div>
+        </div>
+      )
+      if (b.err > 0) return (
+        <div className="cx-disc-note" style={{ borderLeftColor:'#FB923C', background:'var(--cx-warn-soft)', marginBottom:14 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color:'#c2691e', width:16, height:16, flexShrink:0, marginTop:1 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div>本次匯入有 <b>{b.err}</b> 筆失敗，請於「錯誤明細」檢視並修正後重新匯入。</div>
+        </div>
+      )
+      return (
+        <div className="cx-disc-note" style={{ borderLeftColor:'var(--cx-success)', background:'var(--cx-success-soft)', marginBottom:14 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color:'#0f9b6c', width:16, height:16, flexShrink:0, marginTop:1 }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <div>匯入完成，共成功 <b>{b.ok.toLocaleString()}</b> 筆{b.skip ? `，略過 ${b.skip} 筆重複` : ''}，耗時 {b.dur}。</div>
+        </div>
+      )
+    }
+
+    const records = (IMP_RECORDS as Record<number | 'default', ImpRecEntry[]>)[state.index] ?? IMP_RECORDS.default
+    const tabDefs = [
+      { key:'overview', label:'概覽' },
+      { key:'records',  label:'匯入記錄' },
+      ...(showErrTab ? [{ key:'errors', label:'錯誤明細' }] : []),
+      { key:'mapping',  label:'欄位對應' },
+    ]
+
+    return (
+      <>
+        <div className="cx-dw-top">
+          <div className="cx-dw-bar">
+            <span className="crumb" style={{ fontSize:'11.5px', color:'var(--cx-text-faint)', fontWeight:500 }}>
+              <b style={{ color:'var(--cx-text-sub)', fontWeight:500 }}>匯入批次</b> ／ {b.name}
+            </span>
+            <div className="sp" style={{ flex:1 }} />
+            <button className="cx-dw-iconbtn" onClick={() => onStep(-1)}><ChevLeft /></button>
+            <button className="cx-dw-iconbtn" onClick={() => onStep(1)}><ChevRight /></button>
+            <button className="cx-dw-iconbtn" onClick={onClose}><XIcon /></button>
+          </div>
+          <div className="cx-dw-hero">
+            <div className="logo sq" style={{ background: SRC_BG[b.src] }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width:23, height:23 }}>{IMP_SRC_ICON[b.src]}</svg>
+            </div>
+            <div className="h-main" style={{ flex:1, minWidth:0 }}>
+              <h2 style={{ fontSize:17, fontWeight:600 }}>{b.name}</h2>
+              <div className="h-meta" style={{ display:'flex', gap:7, marginTop:6, flexWrap:'wrap' }}>
+                <span className={`cx-status ${st.cls}`}><span className="pip"/>{st.lbl}</span>
+                <span className="cx-prof-tag">{src.tag}</span>
+                <span className="cx-prof-tag">{objShort}</span>
+              </div>
+              <div className="h-sub">{b.file} · {b.freq}</div>
+            </div>
+          </div>
+          <div className="cx-dw-tabs">
+            {tabDefs.map(t => (
+              <div key={t.key} className={`cx-dw-tab ${state.tab === t.key ? 'on' : ''}`} onClick={() => onTabChange(t.key)}>
+                {t.label}
+                {t.key === 'errors' && <span className="n">{b.status === 'failed' ? '!' : errs.length}</span>}
+                {t.key === 'mapping' && <span className="n">{okCount}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="cx-dw-body">
+          {state.tab === 'overview' && (
+            <>
+              <div className="cx-dw-kpi">
+                <div className="k"><div className="v">{b.total.toLocaleString()}</div><div className="l">來源總筆數</div></div>
+                <div className="k"><div className="v" style={{ color:'#0f9b6c' }}>{okV}</div><div className="l">成功匯入</div></div>
+                <div className="k"><div className={`v${b.err > 0 ? ' red' : ''}`}>{errV}</div><div className="l">失敗</div></div>
+              </div>
+              <StatusBlock />
+              <div className="cx-dw-sec">
+                <div className="sh"><h3>批次資訊</h3></div>
+                <div className="cx-info-grid">
+                  <div className="cell full"><div className="cl">來源檔案 / 端點</div><div className="cv" style={{ fontFamily:'monospace', fontSize:12 }}>{b.file}</div></div>
+                  <div className="cell"><div className="cl">目標物件</div><div className="cv">{objShort}</div></div>
+                  <div className="cell"><div className="cl">匯入方式</div><div className="cv">{src.tag}</div></div>
+                  <div className="cell"><div className="cl">頻率</div><div className="cv">{b.freq}</div></div>
+                  <div className="cell"><div className="cl">略過重複</div><div className="cv">{b.skip ? `${b.skip} 筆` : '0 筆'}</div></div>
+                  <div className="cell"><div className="cl">執行者</div><div className="cv">{b.by.name} · {b.by.date}</div></div>
+                  <div className="cell"><div className="cl">耗時</div><div className="cv">{b.dur}</div></div>
+                </div>
+              </div>
+            </>
+          )}
+          {state.tab === 'records' && (
+            <div className="cx-dw-sec">
+              <div className="sh">
+                <h3>匯入記錄</h3>
+                <span className="sh-n">{records.length}</span>
+                <div style={{ flex:1 }} />
+                <span style={{ fontSize:12, color:'var(--cx-accent)', fontWeight:500, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4 }} onClick={() => showToast('已匯出完整記錄 CSV')}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:13, height:13 }}><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>匯出
+                </span>
+              </div>
+              <table className="cx-map-tbl">
+                <thead>
+                  <tr><th>記錄 ID</th><th>名稱</th><th>狀態</th></tr>
+                </thead>
+                <tbody>
+                  {records.map((r, i) => (
+                    <tr key={i}>
+                      <td className="src">{r.id}</td>
+                      <td>{r.name}</td>
+                      <td>
+                        {r.status === 'ok'
+                          ? <span className="cx-status active" style={{ fontSize:11 }}><span className="pip"/>成功</span>
+                          : r.status === 'skip'
+                          ? <span style={{ fontSize:11.5, color:'var(--cx-text-faint)' }}>{r.note || '略過'}</span>
+                          : <span style={{ fontSize:11.5, color:'#d6483f' }}>{r.note || '失敗'}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ padding:'10px 16px', fontSize:11.5, color:'var(--cx-text-faint)' }}>顯示前 {records.length} 筆 · 完整清單請匯出 CSV</div>
+            </div>
+          )}
+          {state.tab === 'errors' && (
+            <div className="cx-dw-sec">
+              <div className="sh">
+                <h3>錯誤明細</h3>
+                {b.status !== 'failed' && <span className="sh-n">{errs.length}</span>}
+                <div style={{ flex:1 }} />
+                <span className="add" style={{ fontSize:12, color:'var(--cx-accent)', fontWeight:500, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4 }} onClick={() => showToast('已匯出錯誤清單')}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:13, height:13 }}><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>匯出錯誤清單
+                </span>
+              </div>
+              {b.status === 'failed'
+                ? <div style={{ padding:'16px' }}>
+                    <div className="cx-run-row" style={{ border:'none', padding:0 }}>
+                      <div className="cx-run-st fail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                      <div className="cx-run-m"><div className="rt">匯入未啟動</div><div className="rd err">{b.failReason}</div></div>
+                    </div>
+                  </div>
+                : errs.map((er, i) => (
+                    <div key={i} className="cx-run-row">
+                      <div className="cx-run-st fail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                      <div className="cx-run-m"><div className="rt">第 {er.row} 列 · {er.id}</div><div className="rd err">{er.reason}</div></div>
+                    </div>
+                  ))
+              }
+            </div>
+          )}
+          {state.tab === 'mapping' && (
+            <div className="cx-dw-sec">
+              <div className="sh">
+                <h3>欄位對應</h3><span className="sh-n">{okCount}</span>
+                <div style={{ flex:1 }} />
+                <span className="add" style={{ fontSize:12, color:'var(--cx-accent)', fontWeight:500, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4 }} onClick={() => showToast('已開啟欄位對應編輯')}>
+                  <EditIcon />編輯對應
+                </span>
+              </div>
+              <table className="cx-map-tbl">
+                <thead><tr><th>來源欄位</th><th></th><th>目標欄位</th></tr></thead>
+                <tbody>
+                  {mapping.map((m, i) => (
+                    m[3] === 'skip'
+                      ? <tr key={i}><td className="src">{m[0]}</td><td className="arr"><ChevRight /></td><td><span style={{ fontSize:11, color:'var(--cx-text-faint)', fontStyle:'italic' }}>略過 — 不匯入</span></td></tr>
+                      : <tr key={i}><td className="src">{m[0]}</td><td className="arr"><ChevRight /></td><td><div className="tgt">{m[1]}<div className="api">{m[2]}</div></div></td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <div className="cx-drawer-scrim open" onClick={onClose} />
@@ -591,6 +1264,8 @@ function DetailDrawer({
         {state.type === 'user'    && <UserContent />}
         {state.type === 'profile' && <ProfileContent />}
         {state.type === 'permset' && <PermSetContent />}
+        {state.type === 'flow'    && <FlowContent />}
+        {state.type === 'batch'   && <BatchContent />}
       </aside>
     </>
   )
@@ -602,11 +1277,11 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
   const router = useRouter()
   const _segs = pathname.replace(/^\/settings\/?/, '').split('/').filter(Boolean)
   const _first = _segs[0] ?? ''
-  const activeTab = (_first === 'objects' && _segs.length >= 2) ? 'fields' : (_first || 'hub')
+  const activeTab = (_first === 'objects' && _segs.length >= 2) ? 'fields' : (_first === 'import' && _segs[1] === 'importwizard') ? 'importwizard' : (_first || 'hub')
   const selectedObjApi = (_first === 'objects' && _segs.length >= 2) ? _segs[1] : ''
   const setActiveTab = (tab: string) => {
     if (tab === 'fields') { router.push(`/settings/objects/${selectedObjApi || OBJ_ITEMS[0].api}`); return }
-    const PATH: Record<string,string> = { hub:'/settings', users:'/settings/users', profiles:'/settings/profiles', permsets:'/settings/permsets', discount:'/settings/discount', objects:'/settings/objects' }
+    const PATH: Record<string,string> = { hub:'/settings', users:'/settings/users', profiles:'/settings/profiles', permsets:'/settings/permsets', discount:'/settings/discount', objects:'/settings/objects', importwizard:'/settings/import/importwizard' }
     router.push(PATH[tab] ?? `/settings/${tab}`)
   }
   const [hubSearch, setHubSearch] = useState('')
@@ -621,15 +1296,24 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
   const [fieldTab, setFieldTab] = useState('fields')
   const [fieldSearch, setFieldSearch] = useState('')
 
+  const [flowOn, setFlowOn] = useState<Record<number, boolean>>(
+    () => Object.fromEntries(FLOWS.map((f, i) => [i, f.on]))
+  )
+  const [batchOn, setBatchOn] = useState<Record<number, boolean>>(
+    () => Object.fromEntries(BATCHES.map((b, i) => [i, b.on]))
+  )
+
   const openUser    = useCallback((i: number) => setDrawer({ open: true, type: 'user',    index: i, tab: 'overview' }), [])
   const openProfile = useCallback((i: number) => setDrawer({ open: true, type: 'profile', index: i, tab: 'objects'  }), [])
   const openPermSet = useCallback((i: number) => setDrawer({ open: true, type: 'permset', index: i, tab: 'perms'    }), [])
+  const openFlow    = useCallback((i: number) => setDrawer({ open: true, type: 'flow',    index: i, tab: 'overview' }), [])
+  const openBatch   = useCallback((i: number) => setDrawer({ open: true, type: 'batch',   index: i, tab: 'overview' }), [])
   const closeDrawer = useCallback(() => setDrawer(d => ({ ...d, open: false })), [])
   const stepDrawer  = useCallback((d: number) => {
     setDrawer(prev => {
-      const len = prev.type === 'user' ? USERS.length : prev.type === 'profile' ? PROFILES.length : PERMSETS.length
+      const len = prev.type === 'user' ? USERS.length : prev.type === 'profile' ? PROFILES.length : prev.type === 'flow' ? FLOWS.length : prev.type === 'batch' ? BATCHES.length : PERMSETS.length
       const ni = (prev.index + d + len) % len
-      const tab = prev.type === 'user' ? 'overview' : prev.type === 'profile' ? 'objects' : 'perms'
+      const tab = prev.type === 'user' ? 'overview' : prev.type === 'profile' ? 'objects' : (prev.type === 'flow' || prev.type === 'batch') ? 'overview' : 'perms'
       return { ...prev, index: ni, tab }
     })
   }, [])
@@ -637,6 +1321,13 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
   const handleToggle = useCallback((key: string) => {
     setToggleStates(prev => ({ ...prev, [key]: !(prev[key] ?? true) }))
   }, [])
+  const handleFlowToggle = useCallback((i: number) => {
+    setFlowOn(prev => ({ ...prev, [i]: !prev[i] }))
+  }, [])
+  const handleBatchToggle = useCallback((i: number) => {
+    setBatchOn(prev => ({ ...prev, [i]: !prev[i] }))
+    showToast(`「${BATCHES[i].name}」排程已${batchOn[i] ? '暫停' : '啟用'}`)
+  }, [batchOn])
 
   const filteredUsers = USERS.filter(u =>
     u.name.includes(userSearch) || u.email.includes(userSearch)
@@ -1206,6 +1897,718 @@ function FieldsPanel() {
   )
 }
 
+  // ── Flow panel ───────────────────────────────────────────────────────────
+  function FlowPanel() {
+    const [trigFilter, setTrigFilter] = useState<FlowTrig | ''>('')
+    const [statusFilter, setStatusFilter] = useState('')
+    const [healthFilter, setHealthFilter] = useState('')
+    const [flowSearch, setFlowSearch] = useState('')
+
+    const list = FLOWS.map((f, i) => ({ ...f, on: flowOn[i] ?? f.on, idx: i }))
+    const filtered = list.filter(f => {
+      if (trigFilter && f.trig !== trigFilter) return false
+      if (statusFilter === 'on'  && !f.on)    return false
+      if (statusFilter === 'off' &&  f.on)    return false
+      if (healthFilter === 'err' && f.fail7 === 0) return false
+      if (healthFilter === 'ok'  && f.fail7 > 0)   return false
+      if (flowSearch) {
+        const q = flowSearch.toLowerCase()
+        if (!f.name.toLowerCase().includes(q) && !f.api.toLowerCase().includes(q)) return false
+      }
+      return true
+    })
+
+    const activeCount = list.filter(f => f.on).length
+    const failFlows   = list.filter(f => f.fail7 > 0).length
+    const totalRuns   = list.reduce((s, f) => s + f.runs7, 0)
+
+    function TrigSvg({ k }: { k: FlowTrig }) {
+      if (k === 'record')   return <><path d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z"/></>
+      if (k === 'schedule') return <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>
+      return <><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></>
+    }
+
+    const GRAD_FL: Record<string, string> = { navy:'#1e3a5f', green:'#16a34a', violet:'#7c3aed', blue:'#2563eb', amber:'#b45309', rose:'#be123c' }
+
+    return (
+      <div>
+        <div className="cx-crumbs"><span>設定</span><ChevRight /><span>自動化流程 Flow</span></div>
+        <div className="cx-set-head">
+          <div>
+            <h1 className="cx-set-title">自動化流程 Flow</h1>
+            <p className="cx-set-desc">管理記錄觸發、排程與畫面流程，監控執行狀態與錯誤。</p>
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button className="cx-btn-sec" style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5 }} onClick={() => showToast('已開啟執行監控')}><MonitorIcon />執行監控</button>
+            <button className="cx-btn-pri" style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5 }} onClick={() => showToast('已開啟新增流程精靈')}><PlusIcon />新增流程</button>
+          </div>
+        </div>
+
+        <div className="cx-stat-bar">
+          <div className="cx-sb-item"><div className="sic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h6M9 15h4"/></svg></div><div className="stx"><div className="snum">{FLOWS.length}</div><div className="slb">流程總數</div></div></div>
+          <div className="cx-sb-item"><div className="sic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div className="stx"><div className="snum">{activeCount}</div><div className="slb">啟用中</div></div></div>
+          <div className="cx-sb-item"><div className="sic red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div className="stx"><div className={`snum${failFlows > 0 ? ' red' : ''}`}>{failFlows}</div><div className="slb">近 7 日有失敗</div></div></div>
+          <div className="cx-sb-item"><div className="sic"><MonitorIcon /></div><div className="stx"><div className="snum">{totalRuns.toLocaleString()}</div><div className="slb">近 7 日執行次數</div></div></div>
+        </div>
+
+        <div className="cx-filter-row">
+          <select className="cx-fpill" value={trigFilter} onChange={e => setTrigFilter(e.target.value as FlowTrig | '')}>
+            <option value="">所有觸發類型</option>
+            <option value="record">記錄觸發</option>
+            <option value="schedule">排程</option>
+            <option value="screen">畫面流程</option>
+          </select>
+          <select className="cx-fpill" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="">所有狀態</option>
+            <option value="on">啟用中</option>
+            <option value="off">已停用</option>
+          </select>
+          <select className="cx-fpill" value={healthFilter} onChange={e => setHealthFilter(e.target.value)}>
+            <option value="">所有健康度</option>
+            <option value="ok">無失敗</option>
+            <option value="err">有失敗</option>
+          </select>
+          <div className="cx-fsearch">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14, color:'var(--cx-text-faint)' }}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input placeholder="搜尋流程名稱或 API Name…" value={flowSearch} onChange={e => setFlowSearch(e.target.value)} />
+          </div>
+          <div style={{ marginLeft:'auto', fontSize:12, color:'var(--cx-text-faint)', whiteSpace:'nowrap', alignSelf:'center' }}>共 <b>{filtered.length}</b> 個流程</div>
+        </div>
+
+        <div className="cx-data-card">
+          <table className="cx-dt">
+            <colgroup>
+              <col />
+              <col style={{ width:110 }} />
+              <col style={{ width:90 }} />
+              <col style={{ width:80 }} />
+              <col />
+              <col style={{ width:64 }} />
+              <col style={{ width:48 }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>流程</th>
+                <th>觸發類型</th>
+                <th>近 7 日失敗</th>
+                <th>執行次數</th>
+                <th>最後修改</th>
+                <th>狀態</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(f => (
+                <tr key={f.api} onClick={() => openFlow(f.idx)}>
+                  <td>
+                    <div className="cx-fl-name">
+                      <div className={`cx-fl-tic ${f.trig}`}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><TrigSvg k={f.trig} /></svg>
+                      </div>
+                      <div className="fn-tx">
+                        <div className="n">
+                          {f.name}
+                          <span className="cx-fl-vbadge">v{f.ver}</span>
+                        </div>
+                        <div className="sub">{f.api} · {f.obj}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span className={`cx-fl-type-tag ${f.trig}`}>{FLOW_TRIGGER[f.trig].tag}</span></td>
+                  <td>
+                    <span className={`cx-fl-err${f.fail7 > 0 ? ' has' : ' none'}`}>
+                      {f.fail7 > 0 && <span className="ed" />}
+                      {f.fail7 > 0 ? `${f.fail7} 次` : '無'}
+                    </span>
+                  </td>
+                  <td style={{ color:'var(--cx-text-sub)' }}>{f.runs7.toLocaleString()}</td>
+                  <td>
+                    <div className="cx-fl-lm">
+                      <div className="av" style={{ background: GRAD_FL[f.lm.g] || '#1e3a5f' }}>{f.lm.av}</div>
+                      <div className="tx"><div className="n">{f.lm.name}</div><div className="d">{f.lm.date}</div></div>
+                    </div>
+                  </td>
+                  <td onClick={e => { e.stopPropagation(); handleFlowToggle(f.idx) }}>
+                    <span className={`cx-fl-toggle${f.on ? '' : ' off'}`} />
+                  </td>
+                  <td><div className="cx-row-arr"><ChevRight /></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="cx-pager">
+            <div className="info">共 <b>{filtered.length}</b> 個流程</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Import panel ─────────────────────────────────────────────────────────
+  function ImportPanel() {
+    const [objFilter, setObjFilter]    = useState('')
+    const [srcFilter, setSrcFilter]    = useState('')
+    const [stFilter,  setStFilter]     = useState('')
+    const [impSearch, setImpSearch]    = useState('')
+
+    const list = BATCHES.map((b, i) => ({ ...b, on: batchOn[i] ?? b.on, idx: i }))
+    const filtered = list.filter(b => {
+      if (objFilter && !b.obj.startsWith(objFilter)) return false
+      if (srcFilter && b.src !== srcFilter)           return false
+      if (stFilter  && b.status !== stFilter)         return false
+      if (impSearch) {
+        const q = impSearch.toLowerCase()
+        if (!b.name.toLowerCase().includes(q) && !b.file.toLowerCase().includes(q)) return false
+      }
+      return true
+    })
+
+    const totalRecs = BATCHES.reduce((s, b) => s + b.ok, 0)
+    const pendingCnt = BATCHES.filter(b => b.status === 'processing' || b.status === 'queued').length
+    const needAtt    = BATCHES.filter(b => b.status === 'partial' || b.status === 'failed').length
+
+    const IMP_SRC_ICON: Record<ImpSrc, React.ReactNode> = {
+      csv:    <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h2M8 17h2M14 13h2M14 17h2"/></>,
+      api:    <><path d="M16 18 22 12 16 6"/><path d="M8 6 2 12 8 18"/><path d="m14 4-4 16"/></>,
+      manual: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></>,
+    }
+
+    function CountCell({ b }: { b: typeof filtered[0] }) {
+      if (b.status === 'queued')    return <span style={{ color:'var(--cx-text-faint)', fontSize:12.5 }}>—</span>
+      if (b.status === 'failed')    return <span style={{ color:'#d6483f', fontSize:12.5, fontWeight:500 }}>未匯入</span>
+      if (b.status === 'processing') return (
+        <div className="cx-miniprog">
+          <div className="track"><i style={{ width:`${b.prog}%` }}/></div>
+          <span className="pc">{b.prog}%</span>
+        </div>
+      )
+      return (
+        <span className="cx-cnt-cell">
+          <span className="ok">{b.ok.toLocaleString()}</span>
+          <span className="sep">/</span>
+          {b.err > 0 ? <span className="er">{b.err}</span> : <span style={{ color:'var(--cx-text-faint)' }}>0</span>}
+        </span>
+      )
+    }
+
+    return (
+      <div>
+        <div className="cx-crumbs"><span>設定</span><ChevRight /><span>系統整合</span><ChevRight /><span>匯入批次設定</span></div>
+        <div className="cx-set-head">
+          <div>
+            <h1 className="cx-set-title">匯入批次設定</h1>
+            <p className="cx-set-desc">管理排程與一次性資料匯入、檢視執行結果與錯誤明細，並設定全域重複比對與錯誤處理規則。</p>
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button className="cx-btn-sec" style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5 }} onClick={() => showToast('已下載匯入範本（CSV）')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:15, height:15 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>下載範本
+            </button>
+            <button className="cx-btn-pri" style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5 }} onClick={() => setActiveTab('importwizard')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:15, height:15 }}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>匯入精靈
+            </button>
+          </div>
+        </div>
+
+        <div className="cx-stat-bar">
+          <div className="cx-sb-item">
+            <div className="sic blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></div>
+            <div className="stx"><div className="snum">{BATCHES.length}</div><div className="slb">匯入批次</div></div>
+          </div>
+          <div className="cx-sb-item">
+            <div className="sic green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+            <div className="stx"><div className="snum green">{totalRecs.toLocaleString()}</div><div className="slb">近 30 日匯入筆數</div></div>
+          </div>
+          <div className="cx-sb-item">
+            <div className="sic orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 12a9 9 0 1 1-6.2-8.5"/><path d="M21 3v6h-6"/></svg></div>
+            <div className="stx"><div className="snum orange">{pendingCnt}</div><div className="slb">處理中 / 排隊</div></div>
+          </div>
+          <div className="cx-sb-item">
+            <div className="sic red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <div className="stx"><div className={`snum${needAtt > 0 ? ' red' : ''}`}>{needAtt}</div><div className="slb">需處理（失敗 / 部分失敗）</div></div>
+          </div>
+        </div>
+
+        {/* 預設匯入規則 */}
+        <div className="cx-filter-row">
+          <select className="cx-fpill" value={objFilter} onChange={e => setObjFilter(e.target.value)}>
+            <option value="">全部物件</option>
+            <option value="名單">名單 Lead</option>
+            <option value="客戶帳號">客戶帳號 Account</option>
+            <option value="商機">商機 Opportunity</option>
+            <option value="聯絡人">聯絡人 Contact</option>
+            <option value="產品">產品 Product2</option>
+            <option value="保固續約">保固續約 Cisco_Warranty_Renewal__c</option>
+          </select>
+          <select className="cx-fpill" value={srcFilter} onChange={e => setSrcFilter(e.target.value)}>
+            <option value="">全部來源</option>
+            <option value="csv">CSV 上傳</option>
+            <option value="api">API 同步</option>
+          </select>
+          <select className="cx-fpill" value={stFilter} onChange={e => setStFilter(e.target.value)}>
+            <option value="">全部狀態</option>
+            <option value="scheduled">排程中</option>
+            <option value="processing">處理中</option>
+            <option value="completed">完成</option>
+            <option value="partial">部分失敗</option>
+            <option value="failed">失敗</option>
+            <option value="queued">排隊中</option>
+          </select>
+          <div className="cx-fsearch">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14, color:'var(--cx-text-faint)' }}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input placeholder="搜尋批次名稱或檔案…" value={impSearch} onChange={e => setImpSearch(e.target.value)} />
+          </div>
+          <div style={{ marginLeft:'auto', fontSize:12, color:'var(--cx-text-faint)', whiteSpace:'nowrap', alignSelf:'center' }}>共 <b>{filtered.length}</b> 個批次</div>
+        </div>
+
+        <div className="cx-data-card">
+          <table className="cx-dt">
+            <colgroup>
+              <col />
+              <col style={{ width:140 }} />
+              <col style={{ width:138 }} />
+              <col style={{ width:148 }} />
+              <col style={{ width:92 }} />
+              <col style={{ width:148 }} />
+              <col style={{ width:48 }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>匯入批次</th>
+                <th>目標物件</th>
+                <th>來源 · 頻率</th>
+                <th>筆數（成功 / 失敗）</th>
+                <th>狀態</th>
+                <th>上次執行</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr><td colSpan={7} style={{ padding:'30px', textAlign:'center', color:'var(--cx-text-faint)', fontSize:13, cursor:'default' }}>沒有符合條件的批次</td></tr>
+              )}
+              {filtered.map(b => (
+                <tr key={b.idx} onClick={() => openBatch(b.idx)}>
+                  <td>
+                    <div className="cx-im-name">
+                      <div className={`cx-im-tic ${b.src}`}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{IMP_SRC_ICON[b.src]}</svg>
+                      </div>
+                      <div className="in-tx">
+                        <div className="n">{b.name}</div>
+                        <div className="sub">{b.file}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span className="cx-obj-pill">
+                      <span className="od" />
+                      {b.obj.split(' ')[0]}
+                    </span>
+                  </td>
+                  <td style={{ fontSize:12.5, color:'var(--cx-text-sub)' }}>
+                    {IMP_SOURCE[b.src].tag}
+                    <div style={{ fontSize:11, color:'var(--cx-text-faint)', marginTop:2 }}>{b.freq}</div>
+                  </td>
+                  <td><CountCell b={b} /></td>
+                  <td>
+                    <span className={`cx-status ${IMP_STATUS[b.status].cls}`}>
+                      <span className="pip"/>
+                      {IMP_STATUS[b.status].lbl}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="cx-fl-lm">
+                      <div className="av" style={{ background: GRAD[b.by.g] || '#1e3a5f' }}>{b.by.av}</div>
+                      <div className="tx"><div className="n">{b.by.name}</div><div className="d">{b.by.date}</div></div>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="cx-row-arr"><ChevRight /></div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="cx-pager">
+            <div className="info">共 <b>{filtered.length}</b> 個批次</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Import Wizard panel ───────────────────────────────────────────────────
+  function ImportWizardPanel() {
+    type ObjKey = 'lead' | 'account' | 'opportunity' | 'contact' | 'product'
+    interface WizField { l: string; api: string; req: boolean }
+    interface WizObj   { nm: string; api: string; icon: React.ReactNode; desc: string; fields: WizField[] }
+
+    const WIZ_OBJECTS: Record<ObjKey, WizObj> = {
+      lead: {
+        nm:'名單', api:'Lead', desc:'潛在客戶名單',
+        icon: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></>,
+        fields:[{l:'名稱',api:'Name',req:true},{l:'公司',api:'Company',req:true},{l:'Email',api:'Email',req:false},{l:'電話',api:'Phone',req:false},{l:'來源',api:'LeadSource',req:false},{l:'地區',api:'Region__c',req:false}]
+      },
+      account: {
+        nm:'客戶帳號', api:'Account', desc:'公司 / 組織',
+        icon: <><path d="M5 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M15 9h3a1 1 0 0 1 1 1v11"/><path d="M3 21h18"/><path d="M8 8h2M8 12h2M8 16h2"/></>,
+        fields:[{l:'帳號名稱',api:'Name',req:true},{l:'統一編號',api:'TaxId__c',req:true},{l:'產業',api:'Industry',req:false},{l:'員工規模',api:'NumberOfEmployees',req:false},{l:'官方網站',api:'Website',req:false}]
+      },
+      opportunity: {
+        nm:'商機', api:'Opportunity', desc:'銷售機會',
+        icon: <><path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-6"/></>,
+        fields:[{l:'商機名稱',api:'Name',req:true},{l:'金額',api:'Amount',req:true},{l:'階段',api:'StageName',req:true},{l:'預計關閉日',api:'CloseDate',req:true},{l:'折扣百分比',api:'Discount__c',req:false}]
+      },
+      contact: {
+        nm:'聯絡人', api:'Contact', desc:'帳號下的窗口',
+        icon: <><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></>,
+        fields:[{l:'姓名',api:'Name',req:true},{l:'Email',api:'Email',req:false},{l:'電話',api:'Phone',req:false},{l:'職稱',api:'Title',req:false},{l:'關聯帳號',api:'AccountName',req:false}]
+      },
+      product: {
+        nm:'產品', api:'Product2', desc:'價目表品項',
+        icon: <><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></>,
+        fields:[{l:'產品名稱',api:'Name',req:true},{l:'產品代碼',api:'ProductCode',req:true},{l:'單價',api:'UnitPrice',req:false},{l:'類別',api:'Family',req:false}]
+      }
+    }
+    const WIZ_SAMPLE: Record<ObjKey, string> = {
+      lead:        'name,company,email,phone,source,region\n張庭瑋,宏立科技,t.chang@honglih.com,02-2712-3344,官網,北區\n李孟潔,優思資訊,meng.li@usinfo.tw,03-558-7700,展會,中區\n王柏宇,鼎新電腦,by.wang@dsc.com.tw,04-2358-1100,轉介,中區\n陳怡安,凱基系統,ya.chen@kgi-sys.com,07-336-9988,電話進線,南區',
+      account:     'name,tax_id,industry,employees,website\n宏立科技股份有限公司,28451930,製造業,420,https://honglih.com\n優思資訊有限公司,53120887,軟體服務,86,https://usinfo.tw\n鼎新電腦股份有限公司,11912033,軟體服務,3200,https://dsc.com.tw',
+      opportunity: 'opp_name,amount,stage,close_date,discount\n宏立科技-ERP導入案,1850000,提案,2026-08-30,8\n優思資訊-雲端續約,420000,談判,2026-07-15,5\n鼎新電腦-資安方案,2760000,需求確認,2026-09-20,0',
+      contact:     'name,email,phone,title,account\n張庭瑋,t.chang@honglih.com,02-2712-3344,資訊處長,宏立科技\n李孟潔,meng.li@usinfo.tw,03-558-7700,採購經理,優思資訊',
+      product:     'name,code,price,family\nCisco Catalyst 9300 交換器,WS-C9300-24T,142000,網路設備\nMeraki MX68 防火牆,MX68-HW,38500,資安設備\nCisco 智慧授權續約,DNA-C-1Y,21000,軟體授權'
+    }
+    const STEP_LABELS = ['選擇物件', '上傳 CSV', '對應欄位', '建立資料']
+
+    const [step, setStep]       = useState(1)
+    const [objKey, setObjKey]   = useState<ObjKey | null>(null)
+    const [fileName, setFileName] = useState<string | null>(null)
+    const [headers, setHeaders] = useState<string[]>([])
+    const [rows, setRows]       = useState<string[][]>([])
+    const [map, setMap]         = useState<Record<string, number>>({})
+    const [done, setDone]       = useState(false)
+    const [result, setResult]   = useState<{ created: number; failed: number; total: number } | null>(null)
+    const [dragOver, setDragOver] = useState(false)
+    const fileRef = useRef<HTMLInputElement>(null)
+
+    function pCSV(text: string) {
+      const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim())
+      const pl = (l: string) => {
+        const out: string[] = []; let cur = '', q = false
+        for (let i = 0; i < l.length; i++) {
+          const c = l[i]
+          if (q) { if (c === '"') { if (l[i + 1] === '"') { cur += '"'; i++ } else q = false } else cur += c }
+          else { if (c === '"') q = true; else if (c === ',') { out.push(cur); cur = '' } else cur += c }
+        }
+        out.push(cur); return out.map(s => s.trim())
+      }
+      if (!lines.length) return { headers: [] as string[], rows: [] as string[][] }
+      return { headers: pl(lines[0]), rows: lines.slice(1).map(pl) }
+    }
+    function doAutoMap(h: string[], ob: WizObj) {
+      const norm = (s: string) => (s || '').toLowerCase().replace(/[_\s\-/]/g, '')
+      const m: Record<string, number> = {}
+      ob.fields.forEach(f => {
+        const cands = [norm(f.l), norm(f.api), norm(f.api.replace('__c', '')), norm(f.l.replace('名稱', ''))]
+        let hit = -1
+        h.forEach((hdr, hi) => { if (hit < 0) { const nh = norm(hdr); if (cands.some(c => c && (nh === c || nh.includes(c) || c.includes(nh)))) hit = hi } })
+        m[f.api] = hit
+      })
+      return m
+    }
+    function reqMissing(ob: WizObj, m: Record<string, number>) {
+      return ob.fields.filter(f => f.req && (m[f.api] === undefined || m[f.api] < 0)).length
+    }
+    function computeResult(ob: WizObj) {
+      const reqFields = ob.fields.filter(f => f.req); let created = 0, failed = 0
+      rows.forEach(r => { const ok = reqFields.every(f => { const idx = map[f.api]; return idx >= 0 && (r[idx] || '').trim().length }); if (ok) created++; else failed++ })
+      return { created, failed, total: rows.length }
+    }
+    function handleFileInput(files: FileList | null) {
+      const f = files?.[0]; if (!f) return
+      const rd = new FileReader()
+      rd.onload = () => {
+        const { headers: h, rows: r } = pCSV(rd.result as string)
+        if (!h.length) { showToast('無法解析此 CSV 檔案'); return }
+        setHeaders(h); setRows(r); setFileName(f.name)
+      }
+      rd.readAsText(f, 'utf-8')
+    }
+    function loadSample() {
+      const { headers: h, rows: r } = pCSV(WIZ_SAMPLE[objKey!])
+      setHeaders(h); setRows(r); setFileName(`${WIZ_OBJECTS[objKey!].api}_範例.csv`)
+    }
+    function clearFile() { setHeaders([]); setRows([]); setFileName(null); setMap({}) }
+    function goNext() {
+      if (step === 2 && headers.length) setMap(doAutoMap(headers, WIZ_OBJECTS[objKey!]))
+      setStep(s => s + 1)
+    }
+    function createData() {
+      const ob = WIZ_OBJECTS[objKey!]; const r = computeResult(ob)
+      setResult(r); setDone(true); showToast(`已建立 ${r.created} 筆 ${ob.nm} 資料`)
+    }
+    function resetWizard() {
+      setStep(1); setObjKey(null); setFileName(null); setHeaders([]); setRows([]); setMap({}); setDone(false); setResult(null)
+    }
+
+    const ob = objKey ? WIZ_OBJECTS[objKey] : null
+    let nextDisabled = false, footHint = ''
+    if (step === 1) { nextDisabled = !objKey; footHint = !objKey ? '請選擇一個物件' : '' }
+    if (step === 2) { nextDisabled = !headers.length; footHint = headers.length ? `已載入 ${rows.length} 筆` : '請先上傳 CSV 或使用範例' }
+    if (step === 3 && ob) { const m = reqMissing(ob, map); nextDisabled = m > 0; footHint = m > 0 ? `尚有 ${m} 個必填欄位未對應` : '必填欄位皆已對應' }
+
+    return (
+      <div>
+        <div className="cx-crumbs"><span>設定</span><ChevRight /><span className="cx-crumb-link" onClick={() => setActiveTab('import')}>匯入批次設定</span><ChevRight /><span>系統匯入精靈</span></div>
+        <div className="cx-set-head">
+          <div>
+            <button className="cx-btn-back" onClick={() => setActiveTab('import')}>
+              <ChevLeft />返回匯入批次
+            </button>
+            <h1 className="cx-set-title">系統匯入精靈</h1>
+            <p className="cx-set-desc">四個步驟匯入資料：選擇目標物件、上傳 CSV 檔案、對應欄位，並建立資料。</p>
+          </div>
+        </div>
+
+        <div className="cx-wiz-card">
+          {/* Steps bar */}
+          <div className="cx-wiz-steps">
+            {STEP_LABELS.map((label, i) => {
+              const n = i + 1
+              const cls = n < step ? 'done' : n === step ? 'active' : ''
+              return (
+                <Fragment key={i}>
+                  <div className={`cx-wiz-step ${cls}`}>
+                    <div className="num">
+                      {n < step
+                        ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5"/></svg>
+                        : n}
+                    </div>
+                    <div className="slab">{label}</div>
+                  </div>
+                  {i < STEP_LABELS.length - 1 && <div className={`cx-wiz-line ${n < step ? 'done' : ''}`} />}
+                </Fragment>
+              )
+            })}
+          </div>
+
+          {/* Body */}
+          <div className="cx-wiz-body">
+            {/* Step 1 — select object */}
+            {step === 1 && (
+              <>
+                <div className="cx-wiz-htitle">選擇要匯入的目標物件</div>
+                <div className="cx-wiz-hdesc">資料將建立到所選物件。每次匯入僅能對應一個物件。</div>
+                <div className="cx-wiz-objgrid">
+                  {(Object.keys(WIZ_OBJECTS) as ObjKey[]).map(k => {
+                    const o = WIZ_OBJECTS[k]
+                    return (
+                      <div key={k} className={`cx-wiz-objcard${objKey === k ? ' sel' : ''}`}
+                        onClick={() => { setObjKey(k); setHeaders([]); setRows([]); setFileName(null); setMap({}) }}>
+                        <div className="oc-check">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5"/></svg>
+                        </div>
+                        <div className="oc-ic">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{o.icon}</svg>
+                        </div>
+                        <div className="oc-nm">{o.nm}</div>
+                        <div className="oc-api">{o.api}</div>
+                        <div className="oc-meta">{o.desc} · {o.fields.length} 個可匯入欄位</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Step 2 — upload CSV */}
+            {step === 2 && ob && headers.length === 0 && (
+              <>
+                <div className="cx-wiz-htitle">上傳 {ob.nm} 的 CSV 檔案</div>
+                <div className="cx-wiz-hdesc">第一列須為欄位標頭。檔案須為 UTF-8 編碼的 .csv，下一步可調整欄位對應。</div>
+                <div className={`cx-wiz-drop${dragOver ? ' drag' : ''}`}
+                  onClick={() => fileRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={e => { e.preventDefault(); setDragOver(false); handleFileInput(e.dataTransfer.files) }}>
+                  <div className="dz-ic">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+                  </div>
+                  <div className="dz-t">將 CSV 檔案拖曳至此，或點擊選擇檔案</div>
+                  <div className="dz-s">支援 .csv · 最大 10MB</div>
+                  <div className="dz-or">— 或 —</div>
+                  <div className="cx-wiz-sample">
+                    <button className="cx-btn-ghost" style={{ display:'inline-flex', alignItems:'center', gap:7 }}
+                      onClick={e => { e.stopPropagation(); loadSample() }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:15, height:15 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+                      使用 {ob.nm} 範例 CSV
+                    </button>
+                  </div>
+                </div>
+                <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display:'none' }}
+                  onChange={e => { handleFileInput(e.target.files); e.target.value = '' }} />
+              </>
+            )}
+
+            {/* Step 2 — file loaded preview */}
+            {step === 2 && ob && headers.length > 0 && (
+              <>
+                <div className="cx-wiz-htitle">已載入檔案</div>
+                <div className="cx-wiz-hdesc">確認偵測到的欄位與資料無誤後，繼續對應欄位。</div>
+                <div className="cx-wiz-filecard">
+                  <div className="fc-ic">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+                  </div>
+                  <div className="fc-m">
+                    <div className="n">{fileName}</div>
+                    <div className="d">{headers.length} 個欄位 · {rows.length} 筆資料</div>
+                  </div>
+                  <div className="fc-x" title="移除檔案" onClick={clearFile}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </div>
+                </div>
+                <div className="cx-wiz-preview">
+                  <div className="pv-head">資料預覽（前 {Math.min(rows.length, 4)} 筆）</div>
+                  <div style={{ overflowX:'auto' }}>
+                    <table className="cx-wiz-pvtbl">
+                      <thead><tr>{headers.map((h, i) => <th key={i}>{h || '（空白）'}</th>)}</tr></thead>
+                      <tbody>{rows.slice(0, 4).map((r, ri) => <tr key={ri}>{headers.map((_, ci) => <td key={ci}>{r[ci] || ''}</td>)}</tr>)}</tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Step 3 — map fields */}
+            {step === 3 && ob && (
+              <>
+                <div className="cx-wiz-htitle">對應欄位</div>
+                <div className="cx-wiz-hdesc">將 CSV 欄位對應到 {ob.nm}（{ob.api}）的目標欄位。系統已自動配對相符欄位。</div>
+                <div className="cx-wiz-mapnote">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16, flexShrink:0 }}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                  <span>標示 <b style={{ color:'#d6483f' }}>＊</b> 為必填欄位，必須對應到一個 CSV 欄位才能建立資料。</span>
+                </div>
+                <div className="cx-wiz-maphead">
+                  <span>目標欄位（{ob.nm}）</span><span /><span>CSV 來源欄位</span>
+                </div>
+                {ob.fields.map(f => {
+                  const idx = map[f.api] ?? -1
+                  const unmapped = f.req && idx < 0
+                  return (
+                    <div key={f.api} className="cx-wiz-maprow">
+                      <div className="wiz-tgt">
+                        <div className="tl">{f.l}{f.req && <span className="req">＊</span>}</div>
+                        <div className="ta">{f.api}</div>
+                      </div>
+                      <div className="wiz-arrow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+                      </div>
+                      <div className={`cx-wiz-mapsel${unmapped ? ' unmapped' : ''}`}>
+                        <select value={idx} onChange={e => setMap(m => ({ ...m, [f.api]: +e.target.value }))}>
+                          <option value="-1">— 不對應 —</option>
+                          {headers.map((h, hi) => <option key={hi} value={hi}>{h || '（空白欄）'}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+
+            {/* Step 4 — review */}
+            {step === 4 && ob && !done && (() => {
+              const mapped = ob.fields.filter(f => (map[f.api] ?? -1) >= 0)
+              return (
+                <>
+                  <div className="cx-wiz-htitle">檢視並建立資料</div>
+                  <div className="cx-wiz-hdesc">確認以下設定後點擊「建立資料」，系統將套用預設匯入規則（重複以 Upsert 處理）。</div>
+                  <div className="cx-wiz-rev">
+                    <div className="cx-wiz-revcell">
+                      <div className="rl">目標物件</div>
+                      <div className="rv">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:17, height:17, color:'var(--cx-accent)' }}>{ob.icon}</svg>
+                        {ob.nm} <span style={{ fontWeight:400, color:'var(--cx-text-faint)', fontSize:12 }}>{ob.api}</span>
+                      </div>
+                    </div>
+                    <div className="cx-wiz-revcell"><div className="rl">來源檔案</div><div className="rv" style={{ fontSize:13 }}>{fileName}</div></div>
+                    <div className="cx-wiz-revcell"><div className="rl">資料筆數</div><div className="rv">{rows.length.toLocaleString()} 筆</div></div>
+                    <div className="cx-wiz-revcell"><div className="rl">已對應欄位</div><div className="rv">{mapped.length} / {ob.fields.length}</div></div>
+                  </div>
+                  <div className="cx-wiz-preview">
+                    <div className="pv-head">對應後資料預覽（前 3 筆）</div>
+                    <div style={{ overflowX:'auto' }}>
+                      <table className="cx-wiz-pvtbl">
+                        <thead><tr>{mapped.map(f => <th key={f.api}>{f.l}</th>)}</tr></thead>
+                        <tbody>{rows.slice(0, 3).map((r, ri) => <tr key={ri}>{mapped.map(f => <td key={f.api}>{r[map[f.api]] || ''}</td>)}</tr>)}</tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
+
+            {/* Step 4 — done result */}
+            {step === 4 && ob && done && result && (
+              <div className="cx-wiz-result">
+                <div className="rs-ic">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14.1l-3-3"/></svg>
+                </div>
+                <h2>匯入完成</h2>
+                <div className="rs-sub">
+                  已將 <b>{result.created.toLocaleString()}</b> 筆資料建立到 {ob.nm}（{ob.api}）。
+                  {result.failed > 0 && <><br />有 {result.failed} 筆因必填欄位缺值未匯入。</>}
+                </div>
+                <div className="cx-wiz-rs-stats">
+                  <div className="rs-stat"><div className="v" style={{ color:'#0f9b6c' }}>{result.created.toLocaleString()}</div><div className="l">成功建立</div></div>
+                  <div className="rs-stat"><div className="v" style={{ color: result.failed ? '#d6483f' : undefined }}>{result.failed}</div><div className="l">失敗</div></div>
+                  <div className="rs-stat"><div className="v">{result.total.toLocaleString()}</div><div className="l">來源總筆數</div></div>
+                </div>
+                <div className="cx-wiz-rs-actions">
+                  <button className="cx-btn-outline" style={{ display:'inline-flex', alignItems:'center', gap:7 }} onClick={() => setActiveTab('import')}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:15, height:15 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+                    檢視匯入批次
+                  </button>
+                  <button className="cx-btn-navy" style={{ display:'inline-flex', alignItems:'center', gap:7 }} onClick={resetWizard}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ width:15, height:15 }}><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                    再匯入一批
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="cx-wiz-foot">
+            {step === 4 && done
+              ? <div className="cx-wiz-fnote">匯入已完成，可關閉或開始新的匯入。</div>
+              : (
+                <>
+                  {step > 1 && (
+                    <button className="cx-btn-ghost" style={{ display:'inline-flex', alignItems:'center', gap:7 }} onClick={() => setStep(s => s - 1)}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:15, height:15 }}><path d="m15 18-6-6 6-6"/></svg>
+                      上一步
+                    </button>
+                  )}
+                  <div className="cx-wiz-fnote">{footHint}</div>
+                  <div style={{ flex:1 }} />
+                  {step < 4
+                    ? <button className="cx-btn-navy" style={{ display:'inline-flex', alignItems:'center', gap:7 }}
+                        disabled={nextDisabled} onClick={goNext}>
+                        下一步 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:15, height:15 }}><path d="m9 18 6-6-6-6"/></svg>
+                      </button>
+                    : <button className="cx-btn-navy" style={{ display:'inline-flex', alignItems:'center', gap:7 }}
+                        onClick={createData}>
+                        建立資料 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" style={{ width:15, height:15 }}><path d="M20 6 9 17l-5-5"/></svg>
+                      </button>
+                  }
+                </>
+              )
+            }
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ── Placeholder panel ─────────────────────────────────────────────────────
   function PlaceholderPanel() {
     const meta = METADATA[activeTab] || {
@@ -1267,7 +2670,7 @@ function FieldsPanel() {
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const isFullPanel = ['hub','users','profiles','permsets','discount','objects','fields'].includes(activeTab)
+  const isFullPanel = ['hub','users','profiles','permsets','discount','objects','fields','flow','import','importwizard'].includes(activeTab)
 
   return (
     <>
@@ -1319,6 +2722,9 @@ function FieldsPanel() {
             {activeTab === 'discount' && <DiscountPanel />}
             {activeTab === 'objects'  && <ObjectsPanel />}
             {activeTab === 'fields'   && <FieldsPanel />}
+            {activeTab === 'flow'     && <FlowPanel />}
+            {activeTab === 'import'       && <ImportPanel />}
+            {activeTab === 'importwizard' && <ImportWizardPanel />}
             {!isFullPanel && <PlaceholderPanel />}
           </div>
         </div>
@@ -1332,6 +2738,10 @@ function FieldsPanel() {
         showToast={showToast}
         toggleStates={toggleStates}
         onToggle={handleToggle}
+        flowOn={flowOn}
+        onFlowToggle={handleFlowToggle}
+        batchOn={batchOn}
+        onBatchToggle={handleBatchToggle}
       />
     </>
   )
