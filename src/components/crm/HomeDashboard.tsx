@@ -1,20 +1,29 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { motion } from 'motion/react'
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion } from 'motion/react';
 import {
-  IconWarn, IconPlus, IconPhone, IconTask, IconCalendar,
-  IconOpps, IconLeads, IconArrowUp, IconClock, IconCheck, IconEmail,
-} from './icons'
+  IconWarn,
+  IconPlus,
+  IconPhone,
+  IconTask,
+  IconCalendar,
+  IconOpps,
+  IconLeads,
+  IconArrowUp,
+  IconClock,
+  IconCheck,
+  IconEmail,
+} from './icons';
 
 // ─── Static data ─────────────────────────────────────────────────────────────
 const FUNNEL_STAGES = [
-  { label: '資格確認', width: '100%',   color: '#93C5FD', deals: 8, amount: '$2.1M' },
-  { label: '需求分析', width: '75%',    color: '#60A5FA', deals: 6, amount: '$4.2M' },
-  { label: '提案報價', width: '62.5%',  color: '#3B82F6', deals: 5, amount: '$3.8M' },
-  { label: '議約談判', width: '37.5%',  color: '#2563EB', deals: 3, amount: '$1.9M' },
-  { label: '成交',     width: '12.5%',  color: '#1E40AF', deals: 1, amount: '$0.4M' },
-]
+  { label: '資格確認', width: '100%', color: '#93C5FD', deals: 8, amount: '$2.1M' },
+  { label: '需求分析', width: '75%', color: '#60A5FA', deals: 6, amount: '$4.2M' },
+  { label: '提案報價', width: '62.5%', color: '#3B82F6', deals: 5, amount: '$3.8M' },
+  { label: '議約談判', width: '37.5%', color: '#2563EB', deals: 3, amount: '$1.9M' },
+  { label: '成交', width: '12.5%', color: '#1E40AF', deals: 1, amount: '$0.4M' },
+];
 
 const ACTIVITIES = [
   {
@@ -46,7 +55,7 @@ const ACTIVITIES = [
     ts: '昨 10:00',
     overdue: false,
   },
-]
+];
 
 const OPPS = [
   {
@@ -91,58 +100,73 @@ const OPPS = [
     ownerInitial: '陳',
     ownerName: '陳小明',
   },
-]
+];
 
 // ─── Activity icon helper ─────────────────────────────────────────────────────
 function ActivityIcon({ type }: { type: 'call' | 'email' | 'meet' | 'over' }) {
-  if (type === 'call')  return <div className="cx-act-ic call"><IconPhone /></div>
-  if (type === 'email') return <div className="cx-act-ic email"><IconEmail /></div>
-  if (type === 'meet')  return <div className="cx-act-ic meet"><IconCalendar /></div>
-  return <div className="cx-act-ic over"><IconWarn /></div>
+  if (type === 'call')
+    return (
+      <div className="cx-act-ic call">
+        <IconPhone />
+      </div>
+    );
+  if (type === 'email')
+    return (
+      <div className="cx-act-ic email">
+        <IconEmail />
+      </div>
+    );
+  if (type === 'meet')
+    return (
+      <div className="cx-act-ic meet">
+        <IconCalendar />
+      </div>
+    );
+  return (
+    <div className="cx-act-ic over">
+      <IconWarn />
+    </div>
+  );
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function HomeDashboard() {
-  const [quickMenuOpen, setQuickMenuOpen] = useState(false)
-  const [toast, setToast] = useState({ visible: false, msg: '' })
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const quickMenuRef = useRef<HTMLDivElement>(null)
+  const [quickMenuOpen, setQuickMenuOpen] = useState(false);
+  const [toast, setToast] = useState({ visible: false, msg: '' });
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const quickMenuRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((msg: string) => {
-    setToast({ visible: true, msg })
-    clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(
-      () => setToast((t) => ({ ...t, visible: false })),
-      2200,
-    )
-  }, [])
+    setToast({ visible: true, msg });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast((t) => ({ ...t, visible: false })), 2200);
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (quickMenuOpen && !quickMenuRef.current?.contains(e.target as Node)) {
-        setQuickMenuOpen(false)
+        setQuickMenuOpen(false);
       }
-    }
-    document.addEventListener('click', handler)
-    return () => document.removeEventListener('click', handler)
-  }, [quickMenuOpen])
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [quickMenuOpen]);
 
   return (
     <>
       {/* Greeting */}
       <div className="cx-greet">
         <div>
-          <h1><span style={{ fontWeight: 400 }}>早安，</span>陳小明 👋</h1>
+          <h1>
+            <span style={{ fontWeight: 400 }}>早安，</span>陳小明 👋
+          </h1>
           <div className="cx-greet-sub">
             2026 年 6 月 15 日 · 星期日
             <span className="cx-qtag">Q2 · 第 11 週</span>
           </div>
         </div>
         <div className="cx-greet-actions">
-          <div
-            className="cx-overdue-badge"
-            onClick={() => showToast('篩選：顯示 2 件逾期任務')}
-          >
+          <div className="cx-overdue-badge" onClick={() => showToast('篩選：顯示 2 件逾期任務')}>
             <IconWarn />
             <b>2</b>&nbsp;件逾期任務
           </div>
@@ -150,8 +174,8 @@ export default function HomeDashboard() {
             <button
               className="cx-btn-primary"
               onClick={(e) => {
-                e.stopPropagation()
-                setQuickMenuOpen(!quickMenuOpen)
+                e.stopPropagation();
+                setQuickMenuOpen(!quickMenuOpen);
               }}
             >
               <IconPlus />
@@ -159,16 +183,26 @@ export default function HomeDashboard() {
             </button>
             <div className={`cx-quick-menu ${quickMenuOpen ? 'open' : ''}`}>
               {[
-                { label: '記錄通話', bg: 'var(--cx-accent-soft)', color: 'var(--cx-accent)', Icon: IconPhone },
-                { label: '新增任務', bg: 'var(--cx-success-soft)', color: '#0f9b6c', Icon: IconTask },
+                {
+                  label: '記錄通話',
+                  bg: 'var(--cx-accent-soft)',
+                  color: 'var(--cx-accent)',
+                  Icon: IconPhone,
+                },
+                {
+                  label: '新增任務',
+                  bg: 'var(--cx-success-soft)',
+                  color: '#0f9b6c',
+                  Icon: IconTask,
+                },
                 { label: '安排會議', bg: '#FEF6E0', color: '#D9A406', Icon: IconCalendar },
               ].map(({ label, bg, color, Icon }) => (
                 <div
                   key={label}
                   className="cx-qm-item"
                   onClick={() => {
-                    setQuickMenuOpen(false)
-                    showToast(`已開啟「${label}」面板`)
+                    setQuickMenuOpen(false);
+                    showToast(`已開啟「${label}」面板`);
                   }}
                 >
                   <span className="cx-qm-icon" style={{ background: bg, color }}>
@@ -186,8 +220,8 @@ export default function HomeDashboard() {
                   key={label}
                   className="cx-qm-item"
                   onClick={() => {
-                    setQuickMenuOpen(false)
-                    showToast(`已開啟「${label}」面板`)
+                    setQuickMenuOpen(false);
+                    showToast(`已開啟「${label}」面板`);
                   }}
                 >
                   <span className="cx-qm-icon" style={{ background: bg, color }}>
@@ -210,7 +244,9 @@ export default function HomeDashboard() {
               <svg width="78" height="78" viewBox="0 0 78 78">
                 <circle cx="39" cy="39" r="32" fill="none" stroke="#EFF1F5" strokeWidth="8" />
                 <circle
-                  cx="39" cy="39" r="32"
+                  cx="39"
+                  cy="39"
+                  r="32"
                   fill="none"
                   stroke="url(#rg)"
                   strokeWidth="8"
@@ -230,7 +266,9 @@ export default function HomeDashboard() {
             <div className="cx-ring-det">
               <div className="big">$3.65M</div>
               <div className="small">目標 $5.0M</div>
-              <div className="bar"><i /></div>
+              <div className="bar">
+                <i />
+              </div>
             </div>
           </div>
         </div>
@@ -239,29 +277,43 @@ export default function HomeDashboard() {
           <div className="cx-kpi-title">商機總值</div>
           <div className="cx-kpi-num">$12.4M</div>
           <div className="cx-kpi-row2">
-            <span className="cx-chip up"><IconArrowUp />+18%</span>
+            <span className="cx-chip up">
+              <IconArrowUp />
+              +18%
+            </span>
             <span className="cx-kpi-sub">vs 上季</span>
           </div>
-          <div className="cx-kpi-foot"><b>23</b> 筆進行中商機</div>
+          <div className="cx-kpi-foot">
+            <b>23</b> 筆進行中商機
+          </div>
         </div>
 
         <div className="cx-kpi">
           <div className="cx-kpi-title">新增潛客</div>
           <div className="cx-kpi-num">18</div>
           <div className="cx-kpi-row2">
-            <span className="cx-chip up"><IconArrowUp />+3</span>
+            <span className="cx-chip up">
+              <IconArrowUp />
+              +3
+            </span>
             <span className="cx-kpi-sub">vs 上月</span>
           </div>
-          <div className="cx-kpi-foot"><b>6</b> 筆評分為 Hot 🔥</div>
+          <div className="cx-kpi-foot">
+            <b>6</b> 筆評分為 Hot 🔥
+          </div>
         </div>
 
         <div className="cx-kpi danger">
           <div className="cx-kpi-title">待辦任務</div>
           <div className="cx-kpi-num">7</div>
           <div className="cx-kpi-row2">
-            <span className="cx-chip warn"><IconClock />2 件逾期</span>
+            <span className="cx-chip warn">
+              <IconClock />2 件逾期
+            </span>
           </div>
-          <div className="cx-kpi-foot">今日到期 <b>3</b> 件 · 本週 <b>4</b> 件</div>
+          <div className="cx-kpi-foot">
+            今日到期 <b>3</b> 件 · 本週 <b>4</b> 件
+          </div>
         </div>
       </div>
 
@@ -288,7 +340,9 @@ export default function HomeDashboard() {
                     transition={{ duration: 0.8, delay: 0.12 + i * 0.09, ease: [0.2, 0.8, 0.2, 1] }}
                   />
                 </div>
-                <div className="val"><b>{stage.deals}</b> 筆 · {stage.amount}</div>
+                <div className="val">
+                  <b>{stage.deals}</b> 筆 · {stage.amount}
+                </div>
               </div>
             ))}
             <div className="cx-funnel-foot">
@@ -352,19 +406,26 @@ export default function HomeDashboard() {
                     <div className="cx-opp-name">{opp.name}</div>
                     <div className="cx-opp-sub">{opp.sub}</div>
                   </td>
-                  <td className="r"><span className="cx-amt">{opp.amount}</span></td>
+                  <td className="r">
+                    <span className="cx-amt">{opp.amount}</span>
+                  </td>
                   <td>
                     <span className={`cx-stage-pill ${opp.stageClass}`}>{opp.stageLabel}</span>
                   </td>
                   <td>
                     <div className={`cx-prob ${opp.probClass}`}>
-                      <div className="pbar"><i style={{ width: `${opp.prob}%` }} /></div>
+                      <div className="pbar">
+                        <i style={{ width: `${opp.prob}%` }} />
+                      </div>
                       <span className="pv">{opp.prob}%</span>
                     </div>
                   </td>
                   <td>
                     {opp.dateClass === 'late' ? (
-                      <span className="cx-close-date late"><IconWarn />{opp.date}</span>
+                      <span className="cx-close-date late">
+                        <IconWarn />
+                        {opp.date}
+                      </span>
                     ) : (
                       <span className="cx-close-date">{opp.date}</span>
                     )}
@@ -390,5 +451,5 @@ export default function HomeDashboard() {
         <span>{toast.msg}</span>
       </div>
     </>
-  )
+  );
 }

@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { motion } from 'motion/react'
-import Leads from './Leads'
-import Opportunities from './Opportunities'
-import Accounts from './Accounts'
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion } from 'motion/react';
+import Leads from './Leads';
+import Opportunities from './Opportunities';
+import Accounts from './Accounts';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type NavView =
@@ -15,16 +15,16 @@ type NavView =
   | 'opps'
   | 'activities'
   | 'reports'
-  | 'settings'
+  | 'settings';
 
 // ─── Static data ────────────────────────────────────────────────────────────
 const FUNNEL_STAGES = [
-  { label: '資格確認', width: '100%', color: '#93C5FD', deals: 8,  amount: '$2.1M' },
-  { label: '需求分析', width: '75%',  color: '#60A5FA', deals: 6,  amount: '$4.2M' },
-  { label: '提案報價', width: '62.5%',color: '#3B82F6', deals: 5,  amount: '$3.8M' },
-  { label: '議約談判', width: '37.5%',color: '#2563EB', deals: 3,  amount: '$1.9M' },
-  { label: '成交',     width: '12.5%',color: '#1E40AF', deals: 1,  amount: '$0.4M' },
-]
+  { label: '資格確認', width: '100%', color: '#93C5FD', deals: 8, amount: '$2.1M' },
+  { label: '需求分析', width: '75%', color: '#60A5FA', deals: 6, amount: '$4.2M' },
+  { label: '提案報價', width: '62.5%', color: '#3B82F6', deals: 5, amount: '$3.8M' },
+  { label: '議約談判', width: '37.5%', color: '#2563EB', deals: 3, amount: '$1.9M' },
+  { label: '成交', width: '12.5%', color: '#1E40AF', deals: 1, amount: '$0.4M' },
+];
 
 const ACTIVITIES = [
   {
@@ -56,7 +56,7 @@ const ACTIVITIES = [
     ts: '昨 10:00',
     overdue: false,
   },
-]
+];
 
 const OPPS = [
   {
@@ -101,7 +101,7 @@ const OPPS = [
     ownerInitial: '陳',
     ownerName: '陳小明',
   },
-]
+];
 
 const EMPTY_META: Record<Exclude<NavView, 'home'>, { t: string; d: string; i: string }> = {
   leads: {
@@ -139,7 +139,7 @@ const EMPTY_META: Record<Exclude<NavView, 'home'>, { t: string; d: string; i: st
     d: '團隊、欄位、自動化與整合設定，設計中。',
     i: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M5 5l2 2M17 17l2 2M2 12h3M19 12h3M5 19l2-2M17 7l2-2"/>',
   },
-}
+};
 
 // ─── SVG Icons ──────────────────────────────────────────────────────────────
 function IconHome() {
@@ -147,7 +147,7 @@ function IconHome() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
       <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z" />
     </svg>
-  )
+  );
 }
 function IconLeads() {
   return (
@@ -156,7 +156,7 @@ function IconLeads() {
       <circle cx="12" cy="12" r="4.5" />
       <circle cx="12" cy="12" r="1" />
     </svg>
-  )
+  );
 }
 function IconAccounts() {
   return (
@@ -166,7 +166,7 @@ function IconAccounts() {
       <path d="M3 21h18" />
       <path d="M8 8h2M8 12h2M8 16h2" />
     </svg>
-  )
+  );
 }
 function IconContacts() {
   return (
@@ -176,7 +176,7 @@ function IconContacts() {
       <path d="M16 5.5a3.2 3.2 0 0 1 0 6" />
       <path d="M17.5 14.5a5.5 5.5 0 0 1 3 5" />
     </svg>
-  )
+  );
 }
 function IconOpps() {
   return (
@@ -184,7 +184,7 @@ function IconOpps() {
       <path d="M3 17l5-5 4 3 8-8" />
       <path d="M16 7h4v4" />
     </svg>
-  )
+  );
 }
 function IconActivities() {
   return (
@@ -193,7 +193,7 @@ function IconActivities() {
       <path d="M3 9h18M8 2.5v4M16 2.5v4" />
       <path d="m9 14 2 2 4-4" />
     </svg>
-  )
+  );
 }
 function IconReports() {
   return (
@@ -202,7 +202,7 @@ function IconReports() {
       <rect x="7" y="11" width="3" height="6" />
       <rect x="13" y="7" width="3" height="10" />
     </svg>
-  )
+  );
 }
 function IconSettings() {
   return (
@@ -210,7 +210,7 @@ function IconSettings() {
       <circle cx="12" cy="12" r="3" />
       <path d="M12 2v3M12 19v3M5 5l2 2M17 17l2 2M2 12h3M19 12h3M5 19l2-2M17 7l2-2" />
     </svg>
-  )
+  );
 }
 function IconSearch() {
   return (
@@ -218,14 +218,14 @@ function IconSearch() {
       <circle cx="11" cy="11" r="8" />
       <path d="m21 21-4.3-4.3" />
     </svg>
-  )
+  );
 }
 function IconChevron() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="m6 9 6 6 6-6" />
     </svg>
-  )
+  );
 }
 function IconHelp() {
   return (
@@ -234,7 +234,7 @@ function IconHelp() {
       <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
       <path d="M12 17h.01" />
     </svg>
-  )
+  );
 }
 function IconBell() {
   return (
@@ -242,14 +242,14 @@ function IconBell() {
       <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
       <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
     </svg>
-  )
+  );
 }
 function IconPlus() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
       <path d="M12 5v14M5 12h14" />
     </svg>
-  )
+  );
 }
 function IconWarn() {
   return (
@@ -257,14 +257,14 @@ function IconWarn() {
       <path d="M12 9v4M12 17h.01" />
       <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
     </svg>
-  )
+  );
 }
 function IconArrowUp() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
       <path d="M7 17 17 7M9 7h8v8" />
     </svg>
-  )
+  );
 }
 function IconClock() {
   return (
@@ -272,21 +272,21 @@ function IconClock() {
       <circle cx="12" cy="12" r="10" />
       <path d="M12 7v5l3 2" />
     </svg>
-  )
+  );
 }
 function IconCheck() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
       <path d="M20 6 9 17l-5-5" />
     </svg>
-  )
+  );
 }
 function IconPhone() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z" />
     </svg>
-  )
+  );
 }
 function IconEmail() {
   return (
@@ -294,7 +294,7 @@ function IconEmail() {
       <rect x="2.5" y="5" width="19" height="14" rx="2" />
       <path d="m3 6.5 9 6 9-6" />
     </svg>
-  )
+  );
 }
 function IconCalendar() {
   return (
@@ -302,7 +302,7 @@ function IconCalendar() {
       <rect x="3" y="4.5" width="18" height="16" rx="2" />
       <path d="M3 9h18M8 2.5v4M16 2.5v4" />
     </svg>
-  )
+  );
 }
 function IconTask() {
   return (
@@ -310,48 +310,64 @@ function IconTask() {
       <path d="M11 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" />
       <path d="m9 11 3 3L22 4" />
     </svg>
-  )
+  );
 }
 
 // ─── Activity icon helper ────────────────────────────────────────────────────
 function ActivityIcon({ type }: { type: 'call' | 'email' | 'meet' | 'over' }) {
-  if (type === 'call')  return <div className="cx-act-ic call"><IconPhone /></div>
-  if (type === 'email') return <div className="cx-act-ic email"><IconEmail /></div>
-  if (type === 'meet')  return <div className="cx-act-ic meet"><IconCalendar /></div>
-  return <div className="cx-act-ic over"><IconWarn /></div>
+  if (type === 'call')
+    return (
+      <div className="cx-act-ic call">
+        <IconPhone />
+      </div>
+    );
+  if (type === 'email')
+    return (
+      <div className="cx-act-ic email">
+        <IconEmail />
+      </div>
+    );
+  if (type === 'meet')
+    return (
+      <div className="cx-act-ic meet">
+        <IconCalendar />
+      </div>
+    );
+  return (
+    <div className="cx-act-ic over">
+      <IconWarn />
+    </div>
+  );
 }
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [activeView, setActiveView] = useState<NavView>('home')
-  const [quickMenuOpen, setQuickMenuOpen] = useState(false)
-  const [toast, setToast] = useState({ visible: false, msg: '' })
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const quickMenuRef = useRef<HTMLDivElement>(null)
+  const [activeView, setActiveView] = useState<NavView>('home');
+  const [quickMenuOpen, setQuickMenuOpen] = useState(false);
+  const [toast, setToast] = useState({ visible: false, msg: '' });
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const quickMenuRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((msg: string) => {
-    setToast({ visible: true, msg })
-    clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(
-      () => setToast((t) => ({ ...t, visible: false })),
-      2200,
-    )
-  }, [])
+    setToast({ visible: true, msg });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast((t) => ({ ...t, visible: false })), 2200);
+  }, []);
 
   // Close quick-menu on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (quickMenuOpen && !quickMenuRef.current?.contains(e.target as Node)) {
-        setQuickMenuOpen(false)
+        setQuickMenuOpen(false);
       }
-    }
-    document.addEventListener('click', handler)
-    return () => document.removeEventListener('click', handler)
-  }, [quickMenuOpen])
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [quickMenuOpen]);
 
   const handleNavClick = (view: NavView) => {
-    setActiveView(view)
-  }
+    setActiveView(view);
+  };
 
   return (
     <div className="cx-app">
@@ -359,7 +375,9 @@ export default function Dashboard() {
       <header className="cx-nav">
         <div className="cx-brand">
           <div className="cx-brand-mark">C</div>
-          <div className="cx-brand-name">CX <b>CRM</b></div>
+          <div className="cx-brand-name">
+            CX <b>CRM</b>
+          </div>
         </div>
         <div className="cx-app-switch">
           Sales Cloud
@@ -370,12 +388,16 @@ export default function Dashboard() {
           <input type="text" placeholder="搜尋客戶、聯絡人、商機…" />
         </div>
         <div className="cx-nav-right">
-          <button className="cx-icon-btn" title="說明"><IconHelp /></button>
+          <button className="cx-icon-btn" title="說明">
+            <IconHelp />
+          </button>
           <button className="cx-icon-btn" title="通知">
             <span className="cx-notif-dot" />
             <IconBell />
           </button>
-          <div className="cx-nav-avatar" title="陳小明">陳</div>
+          <div className="cx-nav-avatar" title="陳小明">
+            陳
+          </div>
         </div>
       </header>
 
@@ -383,13 +405,13 @@ export default function Dashboard() {
       <aside className="cx-sidebar">
         <div className="cx-nav-label">銷售</div>
         {[
-          { view: 'home' as NavView,       label: '首頁',     Icon: IconHome },
-          { view: 'leads' as NavView,      label: '潛在客戶', Icon: IconLeads,      badge: '32' },
-          { view: 'accounts' as NavView,   label: '客戶帳號', Icon: IconAccounts },
-          { view: 'contacts' as NavView,   label: '聯絡人',   Icon: IconContacts },
-          { view: 'opps' as NavView,       label: '商機',     Icon: IconOpps,       fav: true },
+          { view: 'home' as NavView, label: '首頁', Icon: IconHome },
+          { view: 'leads' as NavView, label: '潛在客戶', Icon: IconLeads, badge: '32' },
+          { view: 'accounts' as NavView, label: '客戶帳號', Icon: IconAccounts },
+          { view: 'contacts' as NavView, label: '聯絡人', Icon: IconContacts },
+          { view: 'opps' as NavView, label: '商機', Icon: IconOpps, fav: true },
           { view: 'activities' as NavView, label: '活動任務', Icon: IconActivities, badge: '7' },
-          { view: 'reports' as NavView,    label: '報表',     Icon: IconReports },
+          { view: 'reports' as NavView, label: '報表', Icon: IconReports },
         ].map(({ view, label, Icon, badge, fav }) => (
           <div
             key={view}
@@ -399,7 +421,7 @@ export default function Dashboard() {
             <Icon />
             {label}
             {badge && <span className="cx-nav-badge">{badge}</span>}
-            {fav   && <span className="cx-nav-fav">✦</span>}
+            {fav && <span className="cx-nav-fav">✦</span>}
           </div>
         ))}
         <div className="cx-nav-divider" />
@@ -448,7 +470,7 @@ export default function Dashboard() {
         <span>{toast.msg}</span>
       </div>
     </div>
-  )
+  );
 }
 
 // ─── Home Dashboard ──────────────────────────────────────────────────────────
@@ -458,27 +480,26 @@ function HomeDashboard({
   setQuickMenuOpen,
   quickMenuRef,
 }: {
-  showToast: (msg: string) => void
-  quickMenuOpen: boolean
-  setQuickMenuOpen: (v: boolean) => void
-  quickMenuRef: React.RefObject<HTMLDivElement | null>
+  showToast: (msg: string) => void;
+  quickMenuOpen: boolean;
+  setQuickMenuOpen: (v: boolean) => void;
+  quickMenuRef: React.RefObject<HTMLDivElement | null>;
 }) {
   return (
     <>
       {/* Greeting */}
       <div className="cx-greet">
         <div>
-          <h1><span style={{ fontWeight: 400 }}>早安，</span>陳小明 👋</h1>
+          <h1>
+            <span style={{ fontWeight: 400 }}>早安，</span>陳小明 👋
+          </h1>
           <div className="cx-greet-sub">
             2026 年 6 月 15 日 · 星期日
             <span className="cx-qtag">Q2 · 第 11 週</span>
           </div>
         </div>
         <div className="cx-greet-actions">
-          <div
-            className="cx-overdue-badge"
-            onClick={() => showToast('篩選：顯示 2 件逾期任務')}
-          >
+          <div className="cx-overdue-badge" onClick={() => showToast('篩選：顯示 2 件逾期任務')}>
             <IconWarn />
             <b>2</b>&nbsp;件逾期任務
           </div>
@@ -486,8 +507,8 @@ function HomeDashboard({
             <button
               className="cx-btn-primary"
               onClick={(e) => {
-                e.stopPropagation()
-                setQuickMenuOpen(!quickMenuOpen)
+                e.stopPropagation();
+                setQuickMenuOpen(!quickMenuOpen);
               }}
             >
               <IconPlus />
@@ -495,16 +516,26 @@ function HomeDashboard({
             </button>
             <div className={`cx-quick-menu ${quickMenuOpen ? 'open' : ''}`}>
               {[
-                { label: '記錄通話', bg: 'var(--cx-accent-soft)', color: 'var(--cx-accent)', Icon: IconPhone },
-                { label: '新增任務', bg: 'var(--cx-success-soft)', color: '#0f9b6c', Icon: IconTask },
+                {
+                  label: '記錄通話',
+                  bg: 'var(--cx-accent-soft)',
+                  color: 'var(--cx-accent)',
+                  Icon: IconPhone,
+                },
+                {
+                  label: '新增任務',
+                  bg: 'var(--cx-success-soft)',
+                  color: '#0f9b6c',
+                  Icon: IconTask,
+                },
                 { label: '安排會議', bg: '#FEF6E0', color: '#D9A406', Icon: IconCalendar },
               ].map(({ label, bg, color, Icon }) => (
                 <div
                   key={label}
                   className="cx-qm-item"
                   onClick={() => {
-                    setQuickMenuOpen(false)
-                    showToast(`已開啟「${label}」面板`)
+                    setQuickMenuOpen(false);
+                    showToast(`已開啟「${label}」面板`);
                   }}
                 >
                   <span className="cx-qm-icon" style={{ background: bg, color }}>
@@ -522,8 +553,8 @@ function HomeDashboard({
                   key={label}
                   className="cx-qm-item"
                   onClick={() => {
-                    setQuickMenuOpen(false)
-                    showToast(`已開啟「${label}」面板`)
+                    setQuickMenuOpen(false);
+                    showToast(`已開啟「${label}」面板`);
                   }}
                 >
                   <span className="cx-qm-icon" style={{ background: bg, color }}>
@@ -547,7 +578,9 @@ function HomeDashboard({
               <svg width="78" height="78" viewBox="0 0 78 78">
                 <circle cx="39" cy="39" r="32" fill="none" stroke="#EFF1F5" strokeWidth="8" />
                 <circle
-                  cx="39" cy="39" r="32"
+                  cx="39"
+                  cy="39"
+                  r="32"
                   fill="none"
                   stroke="url(#rg)"
                   strokeWidth="8"
@@ -567,7 +600,9 @@ function HomeDashboard({
             <div className="cx-ring-det">
               <div className="big">$3.65M</div>
               <div className="small">目標 $5.0M</div>
-              <div className="bar"><i /></div>
+              <div className="bar">
+                <i />
+              </div>
             </div>
           </div>
         </div>
@@ -577,10 +612,15 @@ function HomeDashboard({
           <div className="cx-kpi-title">商機總值</div>
           <div className="cx-kpi-num">$12.4M</div>
           <div className="cx-kpi-row2">
-            <span className="cx-chip up"><IconArrowUp />+18%</span>
+            <span className="cx-chip up">
+              <IconArrowUp />
+              +18%
+            </span>
             <span className="cx-kpi-sub">vs 上季</span>
           </div>
-          <div className="cx-kpi-foot"><b>23</b> 筆進行中商機</div>
+          <div className="cx-kpi-foot">
+            <b>23</b> 筆進行中商機
+          </div>
         </div>
 
         {/* 新增潛客 */}
@@ -588,10 +628,15 @@ function HomeDashboard({
           <div className="cx-kpi-title">新增潛客</div>
           <div className="cx-kpi-num">18</div>
           <div className="cx-kpi-row2">
-            <span className="cx-chip up"><IconArrowUp />+3</span>
+            <span className="cx-chip up">
+              <IconArrowUp />
+              +3
+            </span>
             <span className="cx-kpi-sub">vs 上月</span>
           </div>
-          <div className="cx-kpi-foot"><b>6</b> 筆評分為 Hot 🔥</div>
+          <div className="cx-kpi-foot">
+            <b>6</b> 筆評分為 Hot 🔥
+          </div>
         </div>
 
         {/* 待辦任務 */}
@@ -599,9 +644,13 @@ function HomeDashboard({
           <div className="cx-kpi-title">待辦任務</div>
           <div className="cx-kpi-num">7</div>
           <div className="cx-kpi-row2">
-            <span className="cx-chip warn"><IconClock />2 件逾期</span>
+            <span className="cx-chip warn">
+              <IconClock />2 件逾期
+            </span>
           </div>
-          <div className="cx-kpi-foot">今日到期 <b>3</b> 件 · 本週 <b>4</b> 件</div>
+          <div className="cx-kpi-foot">
+            今日到期 <b>3</b> 件 · 本週 <b>4</b> 件
+          </div>
         </div>
       </div>
 
@@ -633,7 +682,9 @@ function HomeDashboard({
                     }}
                   />
                 </div>
-                <div className="val"><b>{stage.deals}</b> 筆 · {stage.amount}</div>
+                <div className="val">
+                  <b>{stage.deals}</b> 筆 · {stage.amount}
+                </div>
               </div>
             ))}
             <div className="cx-funnel-foot">
@@ -698,11 +749,11 @@ function HomeDashboard({
                     <div className="cx-opp-name">{opp.name}</div>
                     <div className="cx-opp-sub">{opp.sub}</div>
                   </td>
-                  <td className="r"><span className="cx-amt">{opp.amount}</span></td>
+                  <td className="r">
+                    <span className="cx-amt">{opp.amount}</span>
+                  </td>
                   <td>
-                    <span className={`cx-stage-pill ${opp.stageClass}`}>
-                      {opp.stageLabel}
-                    </span>
+                    <span className={`cx-stage-pill ${opp.stageClass}`}>{opp.stageLabel}</span>
                   </td>
                   <td>
                     <div className={`cx-prob ${opp.probClass}`}>
@@ -724,10 +775,7 @@ function HomeDashboard({
                   </td>
                   <td>
                     <div className="cx-owner">
-                      <div
-                        className="cx-owner-av"
-                        style={{ background: opp.ownerBg }}
-                      >
+                      <div className="cx-owner-av" style={{ background: opp.ownerBg }}>
                         {opp.ownerInitial}
                       </div>
                       <span className="cx-owner-nm">{opp.ownerName}</span>
@@ -740,12 +788,12 @@ function HomeDashboard({
         </div>
       </div>
     </>
-  )
+  );
 }
 
 // ─── Empty state ─────────────────────────────────────────────────────────────
 function EmptyState({ view }: { view: Exclude<NavView, 'home'> }) {
-  const meta = EMPTY_META[view]
+  const meta = EMPTY_META[view];
   return (
     <div className="cx-empty">
       <div className="cx-empty-ic">
@@ -761,5 +809,5 @@ function EmptyState({ view }: { view: Exclude<NavView, 'home'> }) {
       <p>{meta.d}</p>
       <div className="cx-empty-tag">即將推出</div>
     </div>
-  )
+  );
 }

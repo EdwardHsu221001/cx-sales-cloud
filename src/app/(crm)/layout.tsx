@@ -1,5 +1,5 @@
-import AppShell from '@/components/crm/AppShell'
+import AppShell from '@/components/crm/AppShell';
 
 export default function CrmLayout({ children }: { children: React.ReactNode }) {
-  return <AppShell>{children}</AppShell>
+  return <AppShell>{children}</AppShell>;
 }

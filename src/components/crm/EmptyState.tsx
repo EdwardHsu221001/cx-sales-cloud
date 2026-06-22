@@ -29,12 +29,12 @@ const META = {
     d: '團隊、欄位、自動化與整合設定，設計中。',
     i: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M5 5l2 2M17 17l2 2M2 12h3M19 12h3M5 19l2-2M17 7l2-2"/>',
   },
-} as const
+} as const;
 
-type Page = keyof typeof META
+type Page = keyof typeof META;
 
 export default function EmptyState({ page }: { page: Page }) {
-  const meta = META[page]
+  const meta = META[page];
   return (
     <div className="cx-empty">
       <div className="cx-empty-ic">
@@ -50,5 +50,5 @@ export default function EmptyState({ page }: { page: Page }) {
       <p>{meta.d}</p>
       <div className="cx-empty-tag">即將推出</div>
     </div>
-  )
+  );
 }

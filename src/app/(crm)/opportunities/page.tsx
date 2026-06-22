@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import Opportunities from '@/components/crm/Opportunities'
+import Opportunities from '@/components/crm/Opportunities';
 
 export default function OpportunitiesPage() {
-  return <Opportunities showToast={() => {}} />
+  return <Opportunities showToast={() => {}} />;
 }
