@@ -3,6 +3,15 @@
 import { useState, useCallback, useRef, Fragment } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { IconSearch } from './icons';
+import {
+  splitMergeText,
+  filterEmailTemplates,
+  emailStats,
+  type EmailCategory,
+  type EmailTemplate,
+  type EmailMergeGroup,
+  type EmailSig,
+} from './email.utils';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function ChevRight() {
@@ -1346,7 +1355,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'api', label: 'API 設定（Cisco 等）', ph: true },
       { key: 'import', label: '匯入批次設定' },
-      { key: 'email', label: '郵件設定', ph: true },
+      { key: 'email', label: '郵件設定' },
     ],
   },
 ];
@@ -3553,6 +3562,467 @@ function DetailDrawer({
   );
 }
 
+// ── Email settings (郵件設定) data ─────────────────────────────────────────────
+const EMAIL_CATS: Record<string, EmailCategory> = {
+  sales: { nm: '業務 / 商機', hex: '#3B82F6', v: 'blue' },
+  cs: { nm: '客戶成功', hex: '#059669', v: 'green' },
+  service: { nm: '服務支援', hex: '#0369a1', v: 'cyan' },
+  mkt: { nm: '行銷活動', hex: '#be185d', v: 'pink' },
+  sys: { nm: '系統通知', hex: '#6d28d9', v: 'violet' },
+};
+
+const EMAIL_SENT_30D = '3,480';
+
+const SIG: EmailSig = {
+  name: '{{User.Name}}',
+  title: '{{User.Title}}｜CX CRM',
+  phone: '{{User.Phone}}',
+};
+
+const EMAIL_ICON_PATHS: Record<string, React.ReactNode> = {
+  send: (
+    <>
+      <path d="m22 2-7 20-4-9-9-4Z" />
+      <path d="M22 2 11 13" />
+    </>
+  ),
+  chat: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />,
+  trophy: (
+    <>
+      <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0Z" />
+      <path d="M7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 0-3 3" />
+    </>
+  ),
+  welcome: (
+    <>
+      <path d="M3 11l9-8 9 8" />
+      <path d="M5 10v10h14V10" />
+      <path d="M9 20v-6h6v6" />
+    </>
+  ),
+  refresh: (
+    <>
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+      <path d="M3 21v-5h5" />
+    </>
+  ),
+  ticket: (
+    <>
+      <path d="M3 7h18v4a2 2 0 0 0 0 4v2H3v-2a2 2 0 0 0 0-4Z" />
+      <path d="M13 7v10" />
+    </>
+  ),
+  checkc: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12 2.5 2.5 4.5-5" />
+    </>
+  ),
+  calendar: (
+    <>
+      <rect x="3" y="4.5" width="18" height="16" rx="2" />
+      <path d="M3 9h18M8 2.5v4M16 2.5v4" />
+    </>
+  ),
+  gavel: (
+    <>
+      <path d="m14 13-7.5 7.5a2.1 2.1 0 0 1-3-3L11 10" />
+      <path d="m13 8 3-3M9 12l7 7M16 5l3 3M5 19h6" />
+    </>
+  ),
+  news: (
+    <>
+      <path d="M4 4h13v16H6a2 2 0 0 1-2-2Z" />
+      <path d="M17 8h3v10a2 2 0 0 1-2 2" />
+      <path d="M7 8h7M7 12h7M7 16h4" />
+    </>
+  ),
+  back: (
+    <>
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h11a6 6 0 0 1 0 12h-3" />
+    </>
+  ),
+};
+
+function EmailIco({ name }: { name: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      {EMAIL_ICON_PATHS[name]}
+    </svg>
+  );
+}
+
+const EMAIL_TEMPLATES: EmailTemplate[] = [
+  {
+    k: 'quote_send',
+    name: '報價單寄送',
+    cat: 'sales',
+    icon: 'send',
+    on: true,
+    used: '2 天前',
+    from: '業務負責人 <{{User.Email}}>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '您的報價單 {{Opportunity.Name}} 已備妥',
+    body: [
+      { kind: 'greet', text: '親愛的 {{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '感謝您對本公司方案的關注。針對 {{Account.Name}} 的需求，我們已為您備妥報價，明細如下：',
+      },
+      {
+        kind: 'quote',
+        rows: [
+          ['方案', '{{Quote.Name}}'],
+          ['有效期限', '{{Quote.ExpirationDate}}'],
+        ],
+        total: ['報價總額', '{{Quote.TotalAmount}}'],
+      },
+      {
+        kind: 'p',
+        text: '報價於上述期限內有效。如需調整方案內容或安排線上說明，歡迎隨時與我聯繫。',
+      },
+      { kind: 'cta', text: '檢視完整報價單' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+  {
+    k: 'proposal_followup',
+    name: '提案後跟進',
+    cat: 'sales',
+    icon: 'chat',
+    on: true,
+    used: '5 天前',
+    from: '業務負責人 <{{User.Email}}>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '關於 {{Opportunity.Name}} 提案的後續',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '很高興日前能向 {{Account.Name}} 團隊介紹我們的解決方案。想跟進了解貴司內部評估的進度，以及是否還有任何我能協助釐清的地方。',
+      },
+      {
+        kind: 'p',
+        text: '若方便的話，我們可安排一場 30 分鐘的線上會議，針對導入時程與投資報酬進一步討論。',
+      },
+      { kind: 'cta', text: '安排線上會議' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+  {
+    k: 'won_notify',
+    name: '贏單恭賀通知',
+    cat: 'sales',
+    icon: 'trophy',
+    on: true,
+    used: '1 週前',
+    from: 'CX CRM 團隊 <success@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '歡迎加入！感謝 {{Account.Name}} 選擇 CX CRM',
+    body: [
+      { kind: 'greet', text: '親愛的 {{Contact.FirstName}}，' },
+      {
+        kind: 'p',
+        text: '恭喜！{{Account.Name}} 與 CX CRM 的合作正式啟動。您的專屬客戶成功經理將於一個工作天內與您聯繫，協助安排導入啟動會議。',
+      },
+      { kind: 'p', text: '我們非常期待與您一同推動業務數位化的下一步。' },
+      { kind: 'cta', text: '查看導入指南' },
+      {
+        kind: 'sig',
+        sig: {
+          name: '{{Opportunity.Owner}}',
+          title: '業務負責人｜CX CRM',
+          phone: '{{User.Phone}}',
+        },
+      },
+    ],
+  },
+  {
+    k: 'onboarding_welcome',
+    name: '導入歡迎信',
+    cat: 'cs',
+    icon: 'welcome',
+    on: true,
+    used: '3 天前',
+    from: '客戶成功 <success@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '歡迎啟用 CX CRM，{{Contact.FirstName}}！',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，歡迎加入 CX CRM 🎉' },
+      {
+        kind: 'p',
+        text: '您的帳號已開通。為了讓 {{Account.Name}} 團隊更快上手，我們準備了一份導入清單，協助您在第一週完成基本設定與資料匯入。',
+      },
+      { kind: 'p', text: '有任何問題，您的客戶成功經理 {{User.Name}} 隨時為您服務。' },
+      { kind: 'cta', text: '開始導入設定' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+  {
+    k: 'renewal_reminder',
+    name: '續約到期提醒',
+    cat: 'cs',
+    icon: 'refresh',
+    on: true,
+    used: '昨天',
+    from: '客戶成功 <success@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '{{Account.Name}} 的服務將於 {{Contract.EndDate}} 到期',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '提醒您，{{Account.Name}} 目前的服務合約將於 {{Contract.EndDate}} 到期。為確保服務不中斷，建議於到期前完成續約確認。',
+      },
+      {
+        kind: 'quote',
+        rows: [
+          ['合約方案', '{{Contract.Name}}'],
+          ['到期日', '{{Contract.EndDate}}'],
+        ],
+        total: ['續約金額', '{{Contract.RenewalAmount}}'],
+      },
+      { kind: 'cta', text: '確認續約方案' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+  {
+    k: 'case_created',
+    name: '案件已建立通知',
+    cat: 'service',
+    icon: 'ticket',
+    on: true,
+    used: '4 小時前',
+    from: '客服中心 <support@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '您的服務案件 {{Case.Number}} 已建立',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '我們已收到您的請求，案件編號為 {{Case.Number}}。客服團隊將於服務時間內盡快與您聯繫，目前優先等級為 {{Case.Priority}}。',
+      },
+      { kind: 'p', text: '您可隨時透過下方連結追蹤處理進度。' },
+      { kind: 'cta', text: '查看案件狀態' },
+      {
+        kind: 'sig',
+        sig: {
+          name: 'CX CRM 客服中心',
+          title: '服務時間 週一至週五 09:00–18:00',
+          phone: '0800-000-000',
+        },
+      },
+    ],
+  },
+  {
+    k: 'case_resolved',
+    name: '案件已解決通知',
+    cat: 'service',
+    icon: 'checkc',
+    on: true,
+    used: '1 天前',
+    from: '客服中心 <support@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '案件 {{Case.Number}} 已解決',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '您的案件 {{Case.Number}} 已處理完成並關閉。若問題仍未解決，您可在 7 天內回覆此通知重新開啟案件。',
+      },
+      { kind: 'p', text: '我們很重視您的回饋，誠摯邀請您給予本次服務評分。' },
+      { kind: 'cta', text: '填寫滿意度調查' },
+      {
+        kind: 'sig',
+        sig: { name: 'CX CRM 客服中心', title: '感謝您的耐心與配合', phone: '0800-000-000' },
+      },
+    ],
+  },
+  {
+    k: 'event_invite',
+    name: '活動邀請',
+    cat: 'mkt',
+    icon: 'calendar',
+    on: true,
+    used: '2 週前',
+    from: '行銷團隊 <events@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '邀請您參加 {{Campaign.Name}}',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '誠摯邀請您參加 {{Campaign.Name}}。本次活動將分享產業最佳實務與產品最新藍圖，名額有限，敬請及早報名。',
+      },
+      {
+        kind: 'quote',
+        rows: [
+          ['日期', '{{Campaign.StartDate}}'],
+          ['地點', '{{Campaign.Location}}'],
+        ],
+        total: ['報名費用', '免費'],
+      },
+      { kind: 'cta', text: '立即報名' },
+      {
+        kind: 'sig',
+        sig: { name: 'CX CRM 行銷團隊', title: '期待與您相見', phone: 'events@cxcrm.com' },
+      },
+    ],
+  },
+  {
+    k: 'approval_notify',
+    name: '審核待辦通知',
+    cat: 'sys',
+    icon: 'gavel',
+    on: true,
+    used: '30 分鐘前',
+    from: 'CX CRM 系統 <no-reply@cxcrm.com>',
+    to: '{{Approver.Email}}',
+    lang: '繁體中文',
+    subj: '待您審核：{{Quote.Name}}（折扣 {{Quote.Discount}}）',
+    body: [
+      { kind: 'greet', text: '{{Approver.Name}} 您好，' },
+      {
+        kind: 'p',
+        text: '有一筆報價需要您的審核。由 {{User.Name}} 提交，因折扣 {{Quote.Discount}} 超過該角色上限，已自動送出至您的待審清單。',
+      },
+      {
+        kind: 'quote',
+        rows: [
+          ['商機', '{{Opportunity.Name}}'],
+          ['提交人', '{{User.Name}}'],
+          ['折扣', '{{Quote.Discount}}'],
+        ],
+        total: ['報價金額', '{{Quote.TotalAmount}}'],
+      },
+      { kind: 'cta', text: '前往審核' },
+      {
+        kind: 'sig',
+        sig: { name: 'CX CRM 系統通知', title: '此為自動發送，請勿直接回覆', phone: '' },
+      },
+    ],
+  },
+  {
+    k: 'newsletter',
+    name: '月度電子報',
+    cat: 'mkt',
+    icon: 'news',
+    on: false,
+    used: '1 個月前',
+    from: '行銷團隊 <news@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: 'CX CRM 月報｜本月產品更新與客戶案例',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '這是本月的 CX CRM 月報，為您整理產品新功能、實用技巧與精選客戶成功案例。',
+      },
+      { kind: 'cta', text: '閱讀本期月報' },
+      { kind: 'sig', sig: { name: 'CX CRM 行銷團隊', title: '每月一封，與您分享', phone: '' } },
+    ],
+  },
+  {
+    k: 'qbr_invite',
+    name: 'QBR 季度回顧邀約',
+    cat: 'cs',
+    icon: 'calendar',
+    on: false,
+    used: '未使用',
+    from: '客戶成功 <success@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '邀請 {{Account.Name}} 進行季度業務回顧（QBR）',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '又到了季度業務回顧的時間。想與 {{Account.Name}} 團隊一同檢視本季成效、使用狀況與下一季的目標規劃。',
+      },
+      { kind: 'cta', text: '預約 QBR 時段' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+  {
+    k: 'win_back',
+    name: '沉睡客戶喚回',
+    cat: 'cs',
+    icon: 'back',
+    on: false,
+    used: '未使用',
+    from: '客戶成功 <success@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '我們想念您，{{Contact.FirstName}}',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '注意到 {{Account.Name}} 近期較少使用 CX CRM。若有任何使用上的困難或需求變化，我們很樂意協助，也準備了專屬方案歡迎您回來。',
+      },
+      { kind: 'cta', text: '與我們聊聊' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+];
+
+const EMAIL_MERGE: EmailMergeGroup[] = [
+  {
+    g: '商機 Opportunity',
+    f: [
+      '{{Opportunity.Name}}',
+      '{{Opportunity.Amount}}',
+      '{{Opportunity.StageName}}',
+      '{{Opportunity.CloseDate}}',
+      '{{Opportunity.Owner}}',
+    ],
+  },
+  { g: '客戶帳號 Account', f: ['{{Account.Name}}', '{{Account.Industry}}', '{{Account.Owner}}'] },
+  {
+    g: '聯絡人 Contact',
+    f: ['{{Contact.FirstName}}', '{{Contact.LastName}}', '{{Contact.Email}}', '{{Contact.Title}}'],
+  },
+  {
+    g: '報價單 Quote',
+    f: [
+      '{{Quote.Name}}',
+      '{{Quote.TotalAmount}}',
+      '{{Quote.ExpirationDate}}',
+      '{{Quote.Discount}}',
+    ],
+  },
+  { g: '使用者 User', f: ['{{User.Name}}', '{{User.Title}}', '{{User.Phone}}', '{{User.Email}}'] },
+];
+
+/** 將含合併欄位的字串渲染為高亮節點。 */
+function MergeText({ text }: { text: string }) {
+  return (
+    <>
+      {splitMergeText(text).map((part, i) =>
+        part.isMergeField ? (
+          <span key={i} className="cx-em-mf">
+            {part.text}
+          </span>
+        ) : (
+          <Fragment key={i}>{part.text}</Fragment>
+        )
+      )}
+    </>
+  );
+}
+
 // ── Main Settings component ───────────────────────────────────────────────────
 export default function Settings({ showToast }: { showToast: (msg: string) => void }) {
   const pathname = usePathname();
@@ -3602,6 +4072,8 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
   const [objTab, setObjTab] = useState<'std' | 'custom'>('std');
   const [fieldTab, setFieldTab] = useState('fields');
   const [fieldSearch, setFieldSearch] = useState('');
+  const [emailSel, setEmailSel] = useState(EMAIL_TEMPLATES[0].k);
+  const [emailSearch, setEmailSearch] = useState('');
 
   const [flowOn, setFlowOn] = useState<Record<number, boolean>>(() =>
     Object.fromEntries(FLOWS.map((f, i) => [i, f.on]))
@@ -4776,6 +5248,330 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
   }
 
   // ── Objects panel ─────────────────────────────────────────────────────────
+  function EmailPanel() {
+    const stats = emailStats(EMAIL_TEMPLATES, EMAIL_CATS);
+    const filtered = filterEmailTemplates(EMAIL_TEMPLATES, EMAIL_CATS, emailSearch);
+    const selected = EMAIL_TEMPLATES.find((t) => t.k === emailSel) ?? EMAIL_TEMPLATES[0];
+    const selCat = EMAIL_CATS[selected.cat];
+
+    return (
+      <div>
+        <div className="cx-crumbs">
+          <a onClick={() => setActiveTab('hub')}>設定</a>
+          <ChevRight />
+          <span>系統整合</span>
+          <ChevRight />
+          <span>郵件設定</span>
+        </div>
+        <div className="cx-set-head">
+          <div>
+            <h1>
+              郵件設定 <span className="en">Email Templates</span>
+            </h1>
+            <div className="sub">
+              管理系統與業務流程使用的電子郵件範本。範本支援合併欄位，於寄送時自動帶入紀錄資料；可指派至自動化流程、審核通知與手動寄送。
+            </div>
+          </div>
+          <div className="actions">
+            <button
+              className="cx-btn-outline"
+              onClick={() => showToast('已寄出測試郵件至 chen.xm@cxcrm.com')}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m22 2-7 20-4-9-9-4Z" />
+                <path d="M22 2 11 13" />
+              </svg>
+              測試寄送
+            </button>
+            <button className="cx-btn-navy" onClick={() => showToast('建立新郵件範本')}>
+              <PlusIcon />
+              新增範本
+            </button>
+          </div>
+        </div>
+
+        <div className="cx-stat-bar">
+          <div className="cx-stat">
+            <div className="cx-sic blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="m3 7 9 6 9-6" />
+              </svg>
+            </div>
+            <div>
+              <div className="cx-snum">{stats.total}</div>
+              <div className="cx-slbl">範本總數</div>
+            </div>
+          </div>
+          <div className="cx-stat">
+            <div className="cx-sic green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 11.1V12a10 10 0 1 1-5.9-9.1" />
+                <path d="M22 4 12 14.1l-3-3" />
+              </svg>
+            </div>
+            <div>
+              <div className="cx-snum green">{stats.active}</div>
+              <div className="cx-slbl">啟用中</div>
+            </div>
+          </div>
+          <div className="cx-stat">
+            <div className="cx-sic violet">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 7h18M3 12h18M3 17h10" />
+              </svg>
+            </div>
+            <div>
+              <div className="cx-snum">{stats.categories}</div>
+              <div className="cx-slbl">範本分類</div>
+            </div>
+          </div>
+          <div className="cx-stat">
+            <div className="cx-sic orange">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m22 2-7 20-4-9-9-4Z" />
+                <path d="M22 2 11 13" />
+              </svg>
+            </div>
+            <div>
+              <div className="cx-snum orange">{EMAIL_SENT_30D}</div>
+              <div className="cx-slbl">近 30 日寄送</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="cx-em-split">
+          {/* list */}
+          <div className="cx-em-list">
+            <div className="cx-em-lsearch">
+              <input
+                type="search"
+                aria-label="搜尋範本"
+                placeholder="搜尋範本名稱或主旨…"
+                value={emailSearch}
+                onChange={(e) => setEmailSearch(e.target.value)}
+              />
+            </div>
+            <div className="cx-em-lbody">
+              {filtered.length === 0 ? (
+                <div className="cx-em-empty">查無符合的範本</div>
+              ) : (
+                Object.keys(EMAIL_CATS).map((ck) => {
+                  const rows = filtered.filter((t) => t.cat === ck);
+                  if (!rows.length) return null;
+                  const c = EMAIL_CATS[ck];
+                  return (
+                    <Fragment key={ck}>
+                      <div className="cx-em-cat">
+                        <span className="cdot" style={{ background: c.hex }} />
+                        {c.nm}
+                      </div>
+                      {rows.map((t) => (
+                        <div
+                          key={t.k}
+                          className={`cx-em-trow ${t.k === emailSel ? 'on' : ''}`}
+                          onClick={() => setEmailSel(t.k)}
+                        >
+                          <div className={`cx-em-tic v-${c.v}`}>
+                            <EmailIco name={t.icon} />
+                          </div>
+                          <div className="ttx">
+                            <div className="tn">{t.name}</div>
+                            <div className="ts">
+                              {c.nm} · 最後使用 {t.used}
+                            </div>
+                          </div>
+                          <span
+                            className={`tstat ${t.on ? '' : 'off'}`}
+                            title={t.on ? '啟用中' : '停用'}
+                          />
+                        </div>
+                      ))}
+                    </Fragment>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* detail */}
+          <div className="cx-em-detail">
+            <div className="cx-em-card">
+              <div className="cx-em-dhead">
+                <div className={`dic v-${selCat.v}`}>
+                  <EmailIco name={selected.icon} />
+                </div>
+                <div className="dt">
+                  <h3>
+                    {selected.name}
+                    <span className={`cx-em-pill ${selected.on ? 'on' : 'off'}`}>
+                      <span className="d" />
+                      {selected.on ? '啟用中' : '停用'}
+                    </span>
+                  </h3>
+                  <div className="dsub">
+                    {selCat.nm} · 範本 API：Email_{selected.k} · 最後修改 {selected.used}
+                  </div>
+                </div>
+                <div className="dact">
+                  <button
+                    className="cx-em-btn-sm"
+                    onClick={() => showToast(`已複製範本「${selected.name}」`)}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="11" height="11" rx="2" />
+                      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                    </svg>
+                    複製
+                  </button>
+                  <button className="cx-em-btn-sm pri" onClick={() => showToast('開啟範本編輯器')}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                    </svg>
+                    編輯範本
+                  </button>
+                </div>
+              </div>
+
+              <div className="cx-em-meta">
+                {[
+                  ['寄件者', selected.from],
+                  ['收件對象', selected.to],
+                  ['分類', selCat.nm],
+                  ['語言 / 編碼', `${selected.lang} · UTF-8`],
+                ].map(([k, v]) => (
+                  <div className="mc" key={k}>
+                    <div className="mk">{k}</div>
+                    <div className="mv">
+                      <MergeText text={v} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="cx-em-subj">
+                <span className="sl">主旨</span>
+                <span className="sv">
+                  <MergeText text={selected.subj} />
+                </span>
+              </div>
+
+              <div className="cx-em-canvas">
+                <div className="cx-em-mail">
+                  <div className="cx-em-mail-top" />
+                  <div className="cx-em-mail-brand">
+                    <div className="mk">C</div>
+                    <div className="bn">
+                      CX <b>CRM</b>
+                    </div>
+                  </div>
+                  <div className="cx-em-mail-body">
+                    {selected.body.map((b, i) => {
+                      if (b.kind === 'greet')
+                        return (
+                          <p className="greet" key={i}>
+                            <MergeText text={b.text} />
+                          </p>
+                        );
+                      if (b.kind === 'p')
+                        return (
+                          <p key={i}>
+                            <MergeText text={b.text} />
+                          </p>
+                        );
+                      if (b.kind === 'cta')
+                        return (
+                          <a
+                            className="cx-em-cta"
+                            href="#"
+                            onClick={(e) => e.preventDefault()}
+                            key={i}
+                          >
+                            {b.text}
+                          </a>
+                        );
+                      if (b.kind === 'quote')
+                        return (
+                          <div className="cx-em-quote-box" key={i}>
+                            {b.rows.map((r, j) => (
+                              <div className="qr" key={j}>
+                                <span className="qk">{r[0]}</span>
+                                <span>
+                                  <MergeText text={r[1]} />
+                                </span>
+                              </div>
+                            ))}
+                            {b.total && (
+                              <div className="qr tot">
+                                <span>{b.total[0]}</span>
+                                <span>
+                                  <MergeText text={b.total[1]} />
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      // sig
+                      return (
+                        <div className="cx-em-sig" key={i}>
+                          <div className="sn">
+                            <MergeText text={b.sig.name} />
+                          </div>
+                          {b.sig.title && (
+                            <>
+                              <MergeText text={b.sig.title} />
+                              <br />
+                            </>
+                          )}
+                          {b.sig.phone && <MergeText text={b.sig.phone} />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="cx-em-mail-foot">
+                    CX CRM · 台北市內湖區瑞光路 ××× 號　|　本郵件由系統自動發送，請勿直接回覆
+                    <br />
+                    若不願再收到此類通知，可於偏好設定中調整訂閱。
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* merge fields */}
+            <div className="cx-em-card cx-em-mergecard">
+              <div className="cx-em-merge-h">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 7V4h16v3M9 20h6M12 4v16" />
+                </svg>
+                可用合併欄位
+              </div>
+              <div className="cx-em-merge-sub">
+                點擊欄位即可插入游標位置；寄送時以實際紀錄資料替換。
+              </div>
+              {EMAIL_MERGE.map((grp) => (
+                <div className="cx-em-merge-grp" key={grp.g}>
+                  <div className="cx-em-merge-gl">{grp.g}</div>
+                  <div className="cx-em-merge-chips">
+                    {grp.f.map((f) => (
+                      <span
+                        className="cx-em-chip"
+                        key={f}
+                        onClick={() => showToast(`已複製合併欄位 ${f}`)}
+                      >
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function ObjectsPanel() {
     const filtered = OBJ_ITEMS.filter((o) => (objTab === 'std' ? o.std : !o.std));
     const stdCount = OBJ_ITEMS.filter((o) => o.std).length;
@@ -6607,6 +7403,7 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
     'flow',
     'import',
     'importwizard',
+    'email',
   ].includes(activeTab);
 
   return (
@@ -6665,6 +7462,9 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
             {activeTab === 'flow' && <FlowPanel />}
             {activeTab === 'import' && <ImportPanel />}
             {activeTab === 'importwizard' && <ImportWizardPanel />}
+            {/* 以函式呼叫內聯渲染（非 <EmailPanel />），避免每次重繪都產生新的元件型別
+                而導致整個面板卸載重掛——那會讓搜尋框失焦、清單捲動位置被重置。 */}
+            {activeTab === 'email' && EmailPanel()}
             {!isFullPanel && <PlaceholderPanel />}
           </div>
         </div>
