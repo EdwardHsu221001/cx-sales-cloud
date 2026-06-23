@@ -1,27 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-
-// ─── Types ──────────────────────────────────────────────────────────────────
-type Score = 'hot' | 'warm' | 'cold';
-type Status = 'new' | 'contacted' | 'followed' | 'toconvert' | 'overdue';
-type ContactMethod = 'email' | 'phone';
-
-interface Lead {
-  id: number;
-  name: string;
-  initial: string;
-  company: string;
-  contacts: ContactMethod[];
-  score: Score;
-  status: Status;
-  source: string;
-  assigneeBg: string;
-  assigneeInitial: string;
-  assigneeName: string;
-  canConvert: boolean;
-  convertTitle?: string;
-}
+import { filterLeads, type Lead, type Status } from './leads.utils';
 
 // ─── Static data ────────────────────────────────────────────────────────────
 const LEADS: Lead[] = [
@@ -293,7 +273,10 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
   const [allSelected, setAllSelected] = useState(false);
   const [modal, setModal] = useState<null | { name: string; company: string; title: string }>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [query, setQuery] = useState('');
   const addMenuRef = useRef<HTMLDivElement>(null);
+
+  const filtered = filterLeads(LEADS, query);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -456,6 +439,15 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
 
       {/* ── Filter row ── */}
       <div className="cx-filter-row">
+        <div className="cx-fpill cx-lead-search">
+          <input
+            type="search"
+            aria-label="搜尋潛客"
+            placeholder="搜尋姓名或公司"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
         <div className="cx-fpill">
           <span className="fl">評分</span>
           <select onChange={(e) => showToast(`已套用篩選 · 評分：${e.target.value}`)}>
@@ -495,7 +487,7 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
           </select>
         </div>
         <div className="cx-filter-count">
-          共 <b>32</b> 筆
+          共 <b>{filtered.length}</b> 筆
         </div>
       </div>
 
@@ -529,7 +521,14 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
             </tr>
           </thead>
           <tbody>
-            {LEADS.map((lead) => (
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={8} className="cx-empty-row">
+                  找不到符合『{query}』的潛客
+                </td>
+              </tr>
+            )}
+            {filtered.map((lead) => (
               <tr key={lead.id} className={selectedRows.has(lead.id) ? 'sel' : ''}>
                 <td>
                   <div
@@ -622,7 +621,7 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
         {/* Pagination */}
         <div className="cx-pager">
           <div className="info">
-            顯示第 <b>1–6</b> 筆，共 <b>32</b> 筆
+            顯示第 <b>1–6</b> 筆，共 <b>{filtered.length}</b> 筆
           </div>
           <div className="cx-pages">
             <button
