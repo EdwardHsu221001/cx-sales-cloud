@@ -7,6 +7,8 @@ import {
   splitMergeText,
   filterEmailTemplates,
   emailStats,
+  validateTemplateDraft,
+  applyTemplateEdit,
   type EmailCategory,
   type EmailTemplate,
   type EmailMergeGroup,
@@ -3655,7 +3657,7 @@ function EmailIco({ name }: { name: string }) {
   );
 }
 
-const EMAIL_TEMPLATES: EmailTemplate[] = [
+const EMAIL_TEMPLATES_INIT: EmailTemplate[] = [
   {
     k: 'quote_send',
     name: '報價單寄送',
@@ -4072,8 +4074,10 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
   const [objTab, setObjTab] = useState<'std' | 'custom'>('std');
   const [fieldTab, setFieldTab] = useState('fields');
   const [fieldSearch, setFieldSearch] = useState('');
-  const [emailSel, setEmailSel] = useState(EMAIL_TEMPLATES[0].k);
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(EMAIL_TEMPLATES_INIT);
+  const [emailSel, setEmailSel] = useState(EMAIL_TEMPLATES_INIT[0].k);
   const [emailSearch, setEmailSearch] = useState('');
+  const [emailDraft, setEmailDraft] = useState<EmailTemplate | null>(null);
 
   const [flowOn, setFlowOn] = useState<Record<number, boolean>>(() =>
     Object.fromEntries(FLOWS.map((f, i) => [i, f.on]))
@@ -5249,9 +5253,9 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
 
   // ── Objects panel ─────────────────────────────────────────────────────────
   function EmailPanel() {
-    const stats = emailStats(EMAIL_TEMPLATES, EMAIL_CATS);
-    const filtered = filterEmailTemplates(EMAIL_TEMPLATES, EMAIL_CATS, emailSearch);
-    const selected = EMAIL_TEMPLATES.find((t) => t.k === emailSel) ?? EMAIL_TEMPLATES[0];
+    const stats = emailStats(emailTemplates, EMAIL_CATS);
+    const filtered = filterEmailTemplates(emailTemplates, EMAIL_CATS, emailSearch);
+    const selected = emailTemplates.find((t) => t.k === emailSel) ?? emailTemplates[0];
     const selCat = EMAIL_CATS[selected.cat];
 
     return (
@@ -5424,7 +5428,10 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
                     </svg>
                     複製
                   </button>
-                  <button className="cx-em-btn-sm pri" onClick={() => showToast('開啟範本編輯器')}>
+                  <button
+                    className="cx-em-btn-sm pri"
+                    onClick={() => setEmailDraft(structuredClone(selected))}
+                  >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M12 20h9" />
                       <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
@@ -5568,6 +5575,170 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
             </div>
           </div>
         </div>
+
+        {/* ── Edit Drawer ── */}
+        {emailDraft &&
+          (() => {
+            const draft = emailDraft;
+            const v = validateTemplateDraft(draft);
+            const setField = (patch: Partial<EmailTemplate>) =>
+              setEmailDraft((d) => (d ? { ...d, ...patch } : d));
+            const setBlockText = (idx: number, text: string) =>
+              setEmailDraft((d) =>
+                d
+                  ? {
+                      ...d,
+                      body: d.body.map((b, i) =>
+                        i === idx && (b.kind === 'greet' || b.kind === 'p' || b.kind === 'cta')
+                          ? { ...b, text }
+                          : b
+                      ),
+                    }
+                  : d
+              );
+            const close = () => setEmailDraft(null);
+            const save = () => {
+              if (!validateTemplateDraft(draft).ok) return;
+              setEmailTemplates((list) => applyTemplateEdit(list, draft));
+              showToast('範本已更新');
+              setEmailDraft(null);
+            };
+            return (
+              <>
+                <div className="cx-drawer-scrim open" onClick={close} />
+                <aside className="cx-drawer open" aria-label="編輯範本">
+                  <div className="cx-dw-top">
+                    <div className="cx-dw-bar">
+                      <span className="crumb">
+                        <b>郵件範本</b> ／ 編輯
+                      </span>
+                      <div style={{ flex: 1 }} />
+                      <button className="cx-dw-iconbtn" onClick={close} aria-label="關閉">
+                        <XIcon />
+                      </button>
+                    </div>
+                    <div className="cx-emf-hero">
+                      <h2>編輯範本</h2>
+                      <div className="sub">範本 API：Email_{draft.k}（識別碼不可變更）</div>
+                    </div>
+                  </div>
+
+                  <div className="cx-dw-body cx-emf-body">
+                    <div className="cx-emf-grid">
+                      <label className="cx-emf-field span2">
+                        <span className="l">範本名稱</span>
+                        <input
+                          value={draft.name}
+                          onChange={(e) => setField({ name: e.target.value })}
+                        />
+                        {v.nameError && <span className="err">{v.nameError}</span>}
+                      </label>
+
+                      <div className="cx-emf-field">
+                        <span className="l">啟用狀態</span>
+                        <div className="cx-emf-toggle">
+                          <span
+                            className={`cx-toggle ${draft.on ? '' : 'off'}`}
+                            role="switch"
+                            aria-checked={draft.on}
+                            aria-label="啟用狀態"
+                            onClick={() => setField({ on: !draft.on })}
+                          />
+                          <span className="t">{draft.on ? '啟用中' : '停用'}</span>
+                        </div>
+                      </div>
+
+                      <label className="cx-emf-field">
+                        <span className="l">分類</span>
+                        <select
+                          value={draft.cat}
+                          onChange={(e) => setField({ cat: e.target.value })}
+                        >
+                          {Object.keys(EMAIL_CATS).map((ck) => (
+                            <option key={ck} value={ck}>
+                              {EMAIL_CATS[ck].nm}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="cx-emf-field">
+                        <span className="l">寄件者</span>
+                        <input
+                          value={draft.from}
+                          onChange={(e) => setField({ from: e.target.value })}
+                        />
+                      </label>
+
+                      <label className="cx-emf-field">
+                        <span className="l">收件對象</span>
+                        <input
+                          value={draft.to}
+                          onChange={(e) => setField({ to: e.target.value })}
+                        />
+                      </label>
+
+                      <label className="cx-emf-field">
+                        <span className="l">語言</span>
+                        <input
+                          value={draft.lang}
+                          onChange={(e) => setField({ lang: e.target.value })}
+                        />
+                      </label>
+
+                      <label className="cx-emf-field span2">
+                        <span className="l">主旨</span>
+                        <input
+                          value={draft.subj}
+                          onChange={(e) => setField({ subj: e.target.value })}
+                        />
+                        {v.subjError && <span className="err">{v.subjError}</span>}
+                      </label>
+                    </div>
+
+                    <div className="cx-emf-blocks">
+                      <div className="cx-emf-blocks-h">內文區塊</div>
+                      {draft.body.map((b, i) => {
+                        if (b.kind === 'greet' || b.kind === 'p' || b.kind === 'cta') {
+                          const label =
+                            b.kind === 'greet' ? '問候' : b.kind === 'cta' ? '行動按鈕文字' : '段落';
+                          return (
+                            <label className="cx-emf-block" key={i}>
+                              <span className="l">{label}</span>
+                              <textarea
+                                rows={b.kind === 'cta' ? 1 : 3}
+                                value={b.text}
+                                onChange={(e) => setBlockText(i, e.target.value)}
+                              />
+                            </label>
+                          );
+                        }
+                        const ro = b.kind === 'quote' ? '報價表' : '簽名';
+                        return (
+                          <div className="cx-emf-block ro" key={i}>
+                            <span className="l">
+                              {ro}
+                              <span className="rotag">唯讀</span>
+                            </span>
+                            <div className="note">此區塊維持原結構，本版不可編輯。</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="cx-emf-foot">
+                    <button className="cx-btn-outline" onClick={close}>
+                      取消
+                    </button>
+                    <button className="cx-btn-navy" disabled={!v.ok} onClick={save}>
+                      儲存
+                    </button>
+                  </div>
+                </aside>
+              </>
+            );
+          })()}
       </div>
     );
   }

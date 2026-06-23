@@ -100,3 +100,35 @@ export function emailStats(
     categories: Object.keys(cats).length,
   };
 }
+
+export interface TemplateDraftValidation {
+  ok: boolean;
+  nameError?: string;
+  subjError?: string;
+}
+
+/**
+ * 驗證編輯草稿：範本名稱與主旨必填（去除前後空白後非空）。
+ */
+export function validateTemplateDraft(draft: EmailTemplate): TemplateDraftValidation {
+  const result: TemplateDraftValidation = { ok: true };
+  if (!draft.name.trim()) {
+    result.ok = false;
+    result.nameError = '請輸入範本名稱';
+  }
+  if (!draft.subj.trim()) {
+    result.ok = false;
+    result.subjError = '請輸入主旨';
+  }
+  return result;
+}
+
+/**
+ * 將編輯草稿套用回範本清單：依 `k` 取代對應範本，其餘維持不變（不可變更新）。
+ */
+export function applyTemplateEdit(
+  list: EmailTemplate[],
+  draft: EmailTemplate
+): EmailTemplate[] {
+  return list.map((t) => (t.k === draft.k ? draft : t));
+}
