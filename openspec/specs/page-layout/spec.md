@@ -1,0 +1,56 @@
+# page-layout Specification
+
+## Purpose
+TBD - created by archiving change add-pagelayout-page. Update Purpose after archive.
+## Requirements
+### Requirement: 顯示版面統計摘要
+
+頁面版面面板載入時 SHALL 顯示統計摘要，其中「版面總數」MUST 等於所有物件版面數的總和，「套用物件」MUST 等於已設定版面的物件數。兩者皆由 `pageLayoutStats()` 從版面對應表推導，而非寫死。
+
+#### Scenario: 統計反映版面對應表
+
+- **WHEN** 使用者進入頁面版面面板
+- **THEN** 顯示「版面總數」為所有物件版面數總和（目前 5），「套用物件」為已設定版面的物件數（目前 4）
+
+### Requirement: 切換物件更新版面
+
+面板 SHALL 提供物件下拉。選擇不同物件時，版面 pills SHALL 更換為該物件的版面清單，且選取 MUST 重置至第一個版面。
+
+#### Scenario: 切換物件更換 pills
+
+- **WHEN** 使用者把物件由「商機 Opportunity」切換為「客戶帳號 Account」
+- **THEN** 版面 pills 由 2 個（商機）變為 1 個（客戶帳號）
+
+### Requirement: 調色盤關鍵字搜尋
+
+面板的調色盤 SHALL 提供搜尋輸入框。輸入關鍵字時，SHALL 只顯示名稱或型別包含該關鍵字的項目（不分大小寫），並移除過濾後為空的群組；當無任何項目相符時 SHALL 顯示「查無符合的項目」。
+
+#### Scenario: 關鍵字過濾項目
+
+- **WHEN** 使用者在調色盤搜尋框輸入存在於某些項目名稱/型別的關鍵字
+- **THEN** 只顯示相符的項目，不相符的項目與空群組不顯示
+
+#### Scenario: 無相符顯示提示
+
+- **WHEN** 使用者輸入不存在於任何項目的關鍵字
+- **THEN** 調色盤顯示「查無符合的項目」
+
+### Requirement: 編輯版面
+
+面板 SHALL 允許編輯目前版面的區段與欄位：移除欄位後該欄位 MUST 自區段消失；折疊區段後該區段欄位 MUST 隱藏、再次點擊展開；移除區段後整段 MUST 消失。所有編輯採不可變更新。
+
+#### Scenario: 移除欄位
+
+- **WHEN** 使用者點某欄位的「移除」鈕
+- **THEN** 該欄位從其區段消失
+
+#### Scenario: 折疊與展開區段
+
+- **WHEN** 使用者點某區段標題列
+- **THEN** 該區段在折疊與展開之間切換（折疊時欄位隱藏）
+
+#### Scenario: 移除區段
+
+- **WHEN** 使用者點某區段的「移除區段」鈕
+- **THEN** 整個區段從版面消失
+
