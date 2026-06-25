@@ -5808,7 +5808,9 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
               </svg>
             </div>
             <div>
-              <div className="cx-snum green">{stats.active}</div>
+              <div className="cx-snum green" aria-label="啟用中範本數">
+                {stats.active}
+              </div>
               <div className="cx-slbl">啟用中</div>
             </div>
           </div>

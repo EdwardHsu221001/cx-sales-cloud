@@ -96,14 +96,14 @@ describe('郵件範本編輯', () => {
 
   it('關閉啟用狀態後儲存，統計「啟用中」減少', async () => {
     const user = userEvent.setup();
-    const { container } = renderEmail();
-    const activeBefore = Number(container.querySelector('.cx-snum.green')?.textContent);
+    renderEmail();
+    const activeBefore = Number(screen.getByLabelText('啟用中範本數').textContent);
 
     await user.click(screen.getByRole('button', { name: '編輯範本' }));
     await user.click(screen.getByRole('switch', { name: '啟用狀態' }));
     await user.click(screen.getByRole('button', { name: '儲存' }));
 
-    const activeAfter = Number(container.querySelector('.cx-snum.green')?.textContent);
+    const activeAfter = Number(screen.getByLabelText('啟用中範本數').textContent);
     expect(activeAfter).toBe(activeBefore - 1);
   });
 
