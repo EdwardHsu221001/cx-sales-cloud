@@ -1,7 +1,23 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { filterLeads, type Lead, type Status } from './leads.utils';
+import {
+  filterLeads,
+  filterLeadsByStatus,
+  validateLeadDraft,
+  addLead,
+  editLead,
+  deleteLead,
+  convertLead,
+  OWNERS,
+  WORKING_STATUSES,
+  type Lead,
+  type LeadDraft,
+  type Status,
+  type Score,
+  type ContactMethod,
+  type OwnerId,
+} from './leads.utils';
 
 // ─── Static data ────────────────────────────────────────────────────────────
 const LEADS: Lead[] = [
@@ -99,7 +115,45 @@ const STATUS_LABEL: Record<Status, string> = {
   followed: '已跟進',
   toconvert: '待轉換',
   overdue: '逾期未聯',
+  converted: '已轉化',
 };
+
+const SCORE_LABEL: Record<Score, string> = {
+  hot: 'Hot 高潛力',
+  warm: 'Warm 中潛力',
+  cold: 'Cold 低潛力',
+};
+
+const SOURCE_OPTIONS = ['官網表單', '業務介紹', '廣告投放', '展覽活動'];
+
+// 空白草稿（新增用）
+const EMPTY_DRAFT: LeadDraft = {
+  name: '',
+  company: '',
+  convertTitle: '',
+  source: SOURCE_OPTIONS[0],
+  score: 'warm',
+  status: 'new',
+  contacts: [],
+  assignee: 'zhang',
+};
+
+/** 由完整 Lead 還原成可編輯草稿（負責人名字反查 OwnerId）。 */
+function leadToDraft(lead: Lead): LeadDraft {
+  const assignee =
+    (Object.keys(OWNERS) as OwnerId[]).find((k) => OWNERS[k].name === lead.assigneeName) ?? 'zhang';
+  return {
+    id: lead.id,
+    name: lead.name,
+    company: lead.company,
+    convertTitle: lead.convertTitle ?? '',
+    source: lead.source,
+    score: lead.score,
+    status: lead.status,
+    contacts: lead.contacts,
+    assignee,
+  };
+}
 
 // ─── Icons ──────────────────────────────────────────────────────────────────
 function IconDownload() {
@@ -196,12 +250,19 @@ function IconEdit() {
     </svg>
   );
 }
-function IconDots() {
+function IconTrash() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+    </svg>
+  );
+}
+function IconDotsV() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-      <circle cx="5" cy="12" r="1.2" />
+      <circle cx="12" cy="5" r="1.2" />
       <circle cx="12" cy="12" r="1.2" />
-      <circle cx="19" cy="12" r="1.2" />
+      <circle cx="12" cy="19" r="1.2" />
     </svg>
   );
 }
@@ -268,15 +329,27 @@ function IconChevRight() {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function Leads({ showToast }: { showToast: (msg: string) => void }) {
+  const [leads, setLeads] = useState<Lead[]>(LEADS);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [allSelected, setAllSelected] = useState(false);
-  const [modal, setModal] = useState<null | { name: string; company: string; title: string }>(null);
+  const [modal, setModal] = useState<null | {
+    id: number;
+    name: string;
+    company: string;
+    title: string;
+  }>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
+  const [drawer, setDrawer] = useState<LeadDraft | null>(null);
+  const [drawerTried, setDrawerTried] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [rowMenuId, setRowMenuId] = useState<number | null>(null);
   const addMenuRef = useRef<HTMLDivElement>(null);
 
-  const filtered = filterLeads(LEADS, query);
+  const filtered = filterLeadsByStatus(filterLeads(leads, query), statusFilter);
+  const drawerErrors = drawer ? validateLeadDraft(drawer) : null;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -290,18 +363,31 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setModal(null);
+      if (e.key === 'Escape') {
+        setModal(null);
+        setDrawer(null);
+        setDeleteId(null);
+        setRowMenuId(null);
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, []);
+
+  // 列操作選單：點任意處關閉（觸發鈕已 stopPropagation，不會立即關回）
+  useEffect(() => {
+    if (rowMenuId == null) return;
+    const handler = () => setRowMenuId(null);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [rowMenuId]);
 
   const toggleRow = (id: number) => {
     setSelectedRows((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      setAllSelected(next.size === LEADS.length);
+      setAllSelected(next.size === leads.length);
       return next;
     });
   };
@@ -311,19 +397,57 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
       setSelectedRows(new Set());
       setAllSelected(false);
     } else {
-      setSelectedRows(new Set(LEADS.map((l) => l.id)));
+      setSelectedRows(new Set(leads.map((l) => l.id)));
       setAllSelected(true);
     }
   };
 
+  // ── CRUD 抽屜 ──
+  const openCreate = () => {
+    setDrawerTried(false);
+    setDrawer({ ...EMPTY_DRAFT });
+  };
+  const openEdit = (lead: Lead) => {
+    setDrawerTried(false);
+    setDrawer(leadToDraft(lead));
+  };
+  const setField = (patch: Partial<LeadDraft>) => setDrawer((d) => (d ? { ...d, ...patch } : d));
+  const saveDraft = () => {
+    if (!drawer) return;
+    if (!validateLeadDraft(drawer).ok) {
+      setDrawerTried(true);
+      return;
+    }
+    const isEdit = drawer.id != null;
+    setLeads((list) => (isEdit ? editLead(list, drawer) : addLead(list, drawer, Date.now())));
+    setDrawer(null);
+    showToast(isEdit ? `已更新 ${drawer.name}` : `已新增 ${drawer.name}`);
+  };
+
+  // ── 刪除 ──
+  const confirmDelete = () => {
+    if (deleteId == null) return;
+    const target = leads.find((l) => l.id === deleteId);
+    setLeads((list) => deleteLead(list, deleteId));
+    setDeleteId(null);
+    if (target) showToast(`已刪除 ${target.name}`);
+  };
+
   const openConvert = (lead: Lead) => {
-    setModal({ name: lead.name, company: lead.company, title: lead.convertTitle ?? '' });
+    setModal({
+      id: lead.id,
+      name: lead.name,
+      company: lead.company,
+      title: lead.convertTitle ?? '',
+    });
   };
 
   const confirmConvert = () => {
-    const name = modal?.name;
+    const m = modal;
     setModal(null);
-    setTimeout(() => showToast(`已轉換 ${name} → 帳號 + 聯絡人 + 商機`), 180);
+    if (!m) return;
+    setLeads((list) => convertLead(list, m.id));
+    setTimeout(() => showToast(`已轉換 ${m.name} → 帳號 + 聯絡人 + 商機`), 180);
   };
 
   return (
@@ -372,7 +496,8 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
                   className="cx-qm-item"
                   onClick={() => {
                     setAddMenuOpen(false);
-                    showToast(`已開啟「${label}」`);
+                    if (label === '手動新增') openCreate();
+                    else showToast(`已開啟「${label}」`);
                   }}
                 >
                   <span className="cx-qm-icon" style={{ background: bg, color }}>
@@ -459,12 +584,17 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
         </div>
         <div className="cx-fpill">
           <span className="fl">狀態</span>
-          <select onChange={(e) => showToast(`已套用篩選 · 狀態：${e.target.value}`)}>
-            <option>全部</option>
-            <option>新進名單</option>
-            <option>已聯繫</option>
-            <option>已跟進</option>
-            <option>待轉換</option>
+          <select
+            aria-label="依狀態篩選"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as Status | 'all')}
+          >
+            <option value="all">全部</option>
+            {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </option>
+            ))}
           </select>
         </div>
         <div className="cx-fpill">
@@ -497,12 +627,13 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
           <colgroup>
             <col style={{ width: 42 }} />
             <col />
-            <col style={{ width: 78 }} />
-            <col style={{ width: 96 }} />
-            <col style={{ width: 128 }} />
-            <col style={{ width: 104 }} />
-            <col style={{ width: 118 }} />
-            <col style={{ width: 104 }} />
+            <col style={{ width: 100 }} />
+            <col style={{ width: 100 }} />
+            <col style={{ width: 100 }} />
+            <col style={{ width: 100 }} />
+            <col style={{ width: 100 }} />
+            <col style={{ width: 100 }} />
+            <col style={{ width: 100 }} />
           </colgroup>
           <thead>
             <tr>
@@ -516,14 +647,15 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
               <th>評分</th>
               <th>狀態</th>
               <th>來源</th>
-              <th>指派人</th>
+              <th>擁有者</th>
+              <th>轉換</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="cx-empty-row">
+                <td colSpan={9} className="cx-empty-row">
                   找不到符合『{query}』的潛客
                 </td>
               </tr>
@@ -588,30 +720,82 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
                 </td>
                 <td>
                   <div className="cx-lead-ops">
-                    {lead.canConvert ? (
-                      <button className="cx-btn-convert" onClick={() => openConvert(lead)}>
-                        <IconArrowUpRight />
-                        轉換
-                      </button>
+                    {lead.status === 'converted' ? (
+                      <span className="cx-op-dash">-</span>
                     ) : (
                       <>
-                        <button
-                          className="cx-op-ic"
-                          title="編輯"
-                          onClick={() => showToast('「編輯」· 功能設計中')}
-                        >
-                          <IconEdit />
-                        </button>
-                        <button
-                          className="cx-op-ic"
-                          title="更多"
-                          onClick={() => showToast('「更多」· 功能設計中')}
-                        >
-                          <IconDots />
-                        </button>
+                        {lead.canConvert ? (
+                          <button className="cx-btn-convert" onClick={() => openConvert(lead)}>
+                            <IconArrowUpRight />
+                            轉換
+                          </button>
+                        ) : (
+                          <span className="cx-op-dash">-</span>
+                        )}
                       </>
                     )}
                   </div>
+                </td>
+                <td className="cx-op-cell">
+                  {lead.status === 'converted' ? (
+                    <span className="cx-op-dash">-</span>
+                  ) : (
+                    <div className="cx-op-menu-wrap">
+                      <button
+                        className="cx-op-ic"
+                        title="更多操作"
+                        aria-label="更多操作"
+                        aria-haspopup="menu"
+                        aria-expanded={rowMenuId === lead.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRowMenuId((id) => (id === lead.id ? null : lead.id));
+                        }}
+                      >
+                        <IconDotsV />
+                      </button>
+                      <div
+                        className={`cx-quick-menu${rowMenuId === lead.id ? ' open' : ''}`}
+                        role="menu"
+                      >
+                        <div
+                          className="cx-qm-item"
+                          role="menuitem"
+                          onClick={() => {
+                            setRowMenuId(null);
+                            openEdit(lead);
+                          }}
+                        >
+                          <span
+                            className="cx-qm-icon"
+                            style={{
+                              background: 'var(--cx-accent-soft)',
+                              color: 'var(--cx-accent)',
+                            }}
+                          >
+                            <IconEdit />
+                          </span>
+                          編輯
+                        </div>
+                        <div
+                          className="cx-qm-item"
+                          role="menuitem"
+                          onClick={() => {
+                            setRowMenuId(null);
+                            setDeleteId(lead.id);
+                          }}
+                        >
+                          <span
+                            className="cx-qm-icon"
+                            style={{ background: '#FEE2E2', color: '#dc2626' }}
+                          >
+                            <IconTrash />
+                          </span>
+                          刪除
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -743,6 +927,175 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
           </div>
         </div>
       </div>
+
+      {/* ── Delete confirm modal ── */}
+      <div className={`cx-modal-overlay${deleteId != null ? ' open' : ''}`}>
+        <div className="cx-modal" role="dialog" aria-label="刪除確認">
+          <div className="cx-modal-head">
+            <div>
+              <h2>刪除潛客</h2>
+              <div className="ms">確定要刪除這筆潛客嗎？此動作無法復原。</div>
+            </div>
+            <button className="x" onClick={() => setDeleteId(null)}>
+              <IconX />
+            </button>
+          </div>
+          <div className="cx-modal-foot">
+            <div className="grp">
+              <button className="cx-btn-ghost" onClick={() => setDeleteId(null)}>
+                取消
+              </button>
+              <button className="cx-btn-confirm" onClick={confirmDelete}>
+                確定刪除
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Create / Edit drawer ── */}
+      {drawer && (
+        <>
+          <div className="cx-drawer-scrim open" onClick={() => setDrawer(null)} />
+          <aside
+            className="cx-drawer open"
+            aria-label={drawer.id != null ? '編輯潛客' : '新增潛客'}
+          >
+            <div className="cx-dw-top">
+              <div className="cx-dw-bar">
+                <span className="crumb">
+                  <b>潛在客戶</b> ／ {drawer.id != null ? '編輯' : '新增'}
+                </span>
+                <span className="sp" />
+                <button className="cx-dw-iconbtn" onClick={() => setDrawer(null)} aria-label="關閉">
+                  <IconX />
+                </button>
+              </div>
+              <div className="cx-emf-hero">
+                <h2>{drawer.id != null ? '編輯潛客' : '新增潛客'}</h2>
+              </div>
+            </div>
+
+            <div className="cx-dw-body cx-emf-body">
+              <div className="cx-emf-grid">
+                <label className="cx-emf-field span2">
+                  <span className="l">姓名</span>
+                  <input value={drawer.name} onChange={(e) => setField({ name: e.target.value })} />
+                  {drawerTried && drawerErrors?.nameError && (
+                    <span className="err">{drawerErrors.nameError}</span>
+                  )}
+                </label>
+
+                <label className="cx-emf-field span2">
+                  <span className="l">公司</span>
+                  <input
+                    value={drawer.company}
+                    onChange={(e) => setField({ company: e.target.value })}
+                  />
+                  {drawerTried && drawerErrors?.companyError && (
+                    <span className="err">{drawerErrors.companyError}</span>
+                  )}
+                </label>
+
+                <label className="cx-emf-field span2">
+                  <span className="l">職稱</span>
+                  <input
+                    value={drawer.convertTitle}
+                    onChange={(e) => setField({ convertTitle: e.target.value })}
+                  />
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">評分</span>
+                  <select
+                    value={drawer.score}
+                    onChange={(e) => setField({ score: e.target.value as Score })}
+                  >
+                    {(Object.keys(SCORE_LABEL) as Score[]).map((s) => (
+                      <option key={s} value={s}>
+                        {SCORE_LABEL[s]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">狀態</span>
+                  <select
+                    value={drawer.status}
+                    onChange={(e) => setField({ status: e.target.value as Status })}
+                  >
+                    {WORKING_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {STATUS_LABEL[s]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">來源</span>
+                  <select
+                    value={drawer.source}
+                    onChange={(e) => setField({ source: e.target.value })}
+                  >
+                    {SOURCE_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">負責人</span>
+                  <select
+                    value={drawer.assignee}
+                    onChange={(e) => setField({ assignee: e.target.value as OwnerId })}
+                  >
+                    {(Object.keys(OWNERS) as OwnerId[]).map((k) => (
+                      <option key={k} value={k}>
+                        {OWNERS[k].name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="cx-emf-field span2">
+                  <span className="l">聯絡方式</span>
+                  <div className="cx-emf-toggle" style={{ gap: 18 }}>
+                    {(['email', 'phone'] as ContactMethod[]).map((m) => (
+                      <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input
+                          type="checkbox"
+                          checked={drawer.contacts.includes(m)}
+                          onChange={() =>
+                            setField({
+                              contacts: drawer.contacts.includes(m)
+                                ? drawer.contacts.filter((c) => c !== m)
+                                : [...drawer.contacts, m],
+                            })
+                          }
+                        />
+                        <span className="t">{m === 'email' ? 'Email' : '電話'}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="cx-emf-foot">
+              <button className="cx-btn-outline" onClick={() => setDrawer(null)}>
+                取消
+              </button>
+              <button className="cx-btn-navy" onClick={saveDraft}>
+                儲存
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
     </>
   );
 }

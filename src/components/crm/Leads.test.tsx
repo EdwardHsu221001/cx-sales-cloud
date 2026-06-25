@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Leads from './Leads';
 
@@ -79,5 +79,129 @@ describe('Leads 搜尋', () => {
     const normalized = (pagerInfo.textContent ?? '').replace(/\s+/g, '');
     expect(normalized).toContain('共1筆');
     expect(normalized).not.toContain('32');
+  });
+});
+
+function rowOf(name: string) {
+  return screen.getByText(name).closest('tr') as HTMLElement;
+}
+
+async function openCreateDrawer(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: '新增潛客' }));
+  await user.click(screen.getByText('手動新增'));
+}
+
+async function openRowMenu(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(within(rowOf(name)).getByRole('button', { name: '更多操作' }));
+}
+
+describe('Leads 新增', () => {
+  it('填妥姓名與公司後儲存，清單多一筆且計數 +1', async () => {
+    const user = userEvent.setup();
+    renderLeads();
+    expect(screen.getByText(wholeText('共 6 筆'))).toBeInTheDocument();
+
+    await openCreateDrawer(user);
+    await user.type(screen.getByLabelText('姓名'), '新潛客甲');
+    await user.type(screen.getByLabelText('公司'), '新創公司');
+    await user.click(screen.getByRole('button', { name: '儲存' }));
+
+    expect(screen.getByText('新潛客甲')).toBeInTheDocument();
+    expect(screen.getByText(wholeText('共 7 筆'))).toBeInTheDocument();
+  });
+
+  it('姓名或公司空白時按儲存顯示錯誤且不新增', async () => {
+    const user = userEvent.setup();
+    renderLeads();
+    await openCreateDrawer(user);
+
+    await user.click(screen.getByRole('button', { name: '儲存' }));
+
+    expect(screen.getByText('請輸入姓名')).toBeInTheDocument();
+    expect(screen.getByText('請輸入公司')).toBeInTheDocument();
+    expect(screen.getByText(wholeText('共 6 筆'))).toBeInTheDocument();
+  });
+});
+
+describe('Leads 編輯', () => {
+  it('修改姓名後儲存，該列更新', async () => {
+    const user = userEvent.setup();
+    renderLeads();
+
+    await openRowMenu(user, '黃柏翰');
+    await user.click(within(rowOf('黃柏翰')).getByRole('menuitem', { name: '編輯' }));
+    const nameInput = screen.getByLabelText('姓名');
+    await user.clear(nameInput);
+    await user.type(nameInput, '黃柏翰改');
+    await user.click(screen.getByRole('button', { name: '儲存' }));
+
+    expect(screen.getByText('黃柏翰改')).toBeInTheDocument();
+    expect(screen.queryByText('黃柏翰')).not.toBeInTheDocument();
+  });
+});
+
+describe('Leads 刪除', () => {
+  it('點刪除並確認後，該列消失且計數 -1', async () => {
+    const user = userEvent.setup();
+    renderLeads();
+
+    await openRowMenu(user, '黃柏翰');
+    await user.click(within(rowOf('黃柏翰')).getByRole('menuitem', { name: '刪除' }));
+    await user.click(screen.getByRole('button', { name: '確定刪除' }));
+
+    expect(screen.queryByText('黃柏翰')).not.toBeInTheDocument();
+    expect(screen.getByText(wholeText('共 5 筆'))).toBeInTheDocument();
+  });
+
+  it('取消刪除則該列保留', async () => {
+    const user = userEvent.setup();
+    renderLeads();
+
+    await openRowMenu(user, '黃柏翰');
+    await user.click(within(rowOf('黃柏翰')).getByRole('menuitem', { name: '刪除' }));
+    const dialog = screen.getByRole('dialog', { name: '刪除確認' });
+    await user.click(within(dialog).getByRole('button', { name: '取消' }));
+
+    expect(screen.getByText('黃柏翰')).toBeInTheDocument();
+  });
+});
+
+describe('Leads 轉換', () => {
+  it('確認轉換後該列變「已轉化」且編輯/刪除停用', async () => {
+    const user = userEvent.setup();
+    renderLeads();
+
+    await user.click(within(rowOf('林志明')).getByRole('button', { name: '轉換' }));
+    await user.click(screen.getByRole('button', { name: '確認轉換' }));
+
+    const row = rowOf('林志明');
+    expect(within(row).getAllByText('已轉化').length).toBeGreaterThan(0);
+    // 已轉化列鎖定：不再提供操作選單（轉換／編輯／刪除入口皆隱藏）
+    expect(within(row).queryByRole('button', { name: '更多操作' })).not.toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: '轉換' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Leads 狀態篩選', () => {
+  it('選定「待轉換」只顯示該狀態的列', async () => {
+    const user = userEvent.setup();
+    renderLeads();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: '依狀態篩選' }), 'toconvert');
+
+    expect(screen.getByText('林志明')).toBeInTheDocument(); // toconvert
+    expect(screen.queryByText('黃柏翰')).not.toBeInTheDocument(); // contacted
+  });
+});
+
+describe('Leads 抽屜狀態下拉', () => {
+  it('不含「已轉化」選項', async () => {
+    const user = userEvent.setup();
+    renderLeads();
+    await openCreateDrawer(user);
+
+    const statusSelect = screen.getByLabelText('狀態');
+    expect(within(statusSelect).getByRole('option', { name: '待轉換' })).toBeInTheDocument();
+    expect(within(statusSelect).queryByRole('option', { name: '已轉化' })).not.toBeInTheDocument();
   });
 });
