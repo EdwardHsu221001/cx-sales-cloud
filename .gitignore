@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 根目錄的 HTML 設計稿/原型參考（不納入版控）
+/*.html
