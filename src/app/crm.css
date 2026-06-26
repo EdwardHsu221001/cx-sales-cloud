@@ -2957,6 +2957,7 @@ table.cx-lead-tbl {
 .cx-modal-foot .grp {
   display: flex;
   gap: 10px;
+  margin-left: auto;
 }
 .cx-btn-ghost {
   background: #fff;

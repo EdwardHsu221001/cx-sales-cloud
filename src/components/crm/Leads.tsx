@@ -18,6 +18,31 @@ import {
   type ContactMethod,
   type OwnerId,
 } from './leads.utils';
+import ConfirmModal from './ConfirmModal';
+import SearchPill from './SearchPill';
+import {
+  IconDownload,
+  IconPlus,
+  IconPersonAdd,
+  IconCardScan,
+  IconFileCsv,
+  IconTarget,
+  IconClockCircle,
+  IconCheckFat,
+  IconEmail,
+  IconPhone,
+  IconArrowUpRight,
+  IconEdit,
+  IconTrash,
+  IconDotsV,
+  IconCheck,
+  IconClose,
+  IconBuilding,
+  IconPerson,
+  IconTrendUp,
+  IconArrowDown,
+  IconChevron,
+} from './icons';
 
 // ─── Static data ────────────────────────────────────────────────────────────
 const LEADS: Lead[] = [
@@ -153,178 +178,6 @@ function leadToDraft(lead: Lead): LeadDraft {
     contacts: lead.contacts,
     assignee,
   };
-}
-
-// ─── Icons ──────────────────────────────────────────────────────────────────
-function IconDownload() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 3v12M7 10l5 5 5-5" />
-      <path d="M5 21h14" />
-    </svg>
-  );
-}
-function IconPlus() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
-function IconPersonAdd() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="8" r="3.2" />
-      <path d="M5.5 20a6.5 6.5 0 0 1 13 0" />
-    </svg>
-  );
-}
-function IconCardScan() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <circle cx="8" cy="11" r="2" />
-      <path d="M14 10h4M14 14h4" />
-    </svg>
-  );
-}
-function IconFileCsv() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
-      <path d="M14 3v6h6" />
-    </svg>
-  );
-}
-function IconTarget() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="4.5" />
-      <circle cx="12" cy="12" r="1" />
-    </svg>
-  );
-}
-function IconClockCircle() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7.5V12l3 2" />
-    </svg>
-  );
-}
-function IconCheckFat() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M20 7 10 17l-5-5" />
-    </svg>
-  );
-}
-function IconEmail() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="2.5" y="5" width="19" height="14" rx="2" />
-      <path d="m3 6.5 9 6 9-6" />
-    </svg>
-  );
-}
-function IconPhone() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z" />
-    </svg>
-  );
-}
-function IconArrowUpRight() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M7 17 17 7M9 7h8v8" />
-    </svg>
-  );
-}
-function IconEdit() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  );
-}
-function IconTrash() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
-    </svg>
-  );
-}
-function IconDotsV() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-      <circle cx="12" cy="5" r="1.2" />
-      <circle cx="12" cy="12" r="1.2" />
-      <circle cx="12" cy="19" r="1.2" />
-    </svg>
-  );
-}
-function IconCheck() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-function IconX() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  );
-}
-function IconBuilding() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M5 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16" />
-      <path d="M15 9h3a1 1 0 0 1 1 1v11" />
-      <path d="M3 21h18M8 8h2M8 12h2M8 16h2" />
-    </svg>
-  );
-}
-function IconPerson() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="8" r="3.5" />
-      <path d="M5.5 20a6.5 6.5 0 0 1 13 0" />
-    </svg>
-  );
-}
-function IconTrendUp() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 17l5-5 4 3 8-8" />
-      <path d="M16 7h4v4" />
-    </svg>
-  );
-}
-function IconArrowDown() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 5v14M6 13l6 6 6-6" />
-    </svg>
-  );
-}
-function IconChevLeft() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m15 6-6 6 6 6" />
-    </svg>
-  );
-}
-function IconChevRight() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m9 6 6 6-6 6" />
-    </svg>
-  );
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
@@ -564,15 +417,12 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
 
       {/* ── Filter row ── */}
       <div className="cx-filter-row">
-        <div className="cx-fpill cx-lead-search">
-          <input
-            type="search"
-            aria-label="搜尋潛客"
-            placeholder="搜尋姓名或公司"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
+        <SearchPill
+          value={query}
+          onChange={setQuery}
+          label="搜尋潛客"
+          placeholder="搜尋姓名或公司"
+        />
         <div className="cx-fpill">
           <span className="fl">評分</span>
           <select onChange={(e) => showToast(`已套用篩選 · 評分：${e.target.value}`)}>
@@ -813,7 +663,7 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => p - 1)}
             >
-              <IconChevLeft />
+              <IconChevron dir="left" />
             </button>
             {[1, 2, 3].map((p) => (
               <button
@@ -836,7 +686,7 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
               disabled={currentPage === 6}
               onClick={() => setCurrentPage((p) => p + 1)}
             >
-              <IconChevRight />
+              <IconChevron dir="right" />
             </button>
           </div>
         </div>
@@ -858,7 +708,7 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
               </div>
             </div>
             <button className="x" onClick={() => setModal(null)}>
-              <IconX />
+              <IconClose />
             </button>
           </div>
           <div className="cx-modal-body">
@@ -929,29 +779,14 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
       </div>
 
       {/* ── Delete confirm modal ── */}
-      <div className={`cx-modal-overlay${deleteId != null ? ' open' : ''}`}>
-        <div className="cx-modal" role="dialog" aria-label="刪除確認">
-          <div className="cx-modal-head">
-            <div>
-              <h2>刪除潛客</h2>
-              <div className="ms">確定要刪除這筆潛客嗎？此動作無法復原。</div>
-            </div>
-            <button className="x" onClick={() => setDeleteId(null)}>
-              <IconX />
-            </button>
-          </div>
-          <div className="cx-modal-foot">
-            <div className="grp">
-              <button className="cx-btn-ghost" onClick={() => setDeleteId(null)}>
-                取消
-              </button>
-              <button className="cx-btn-confirm" onClick={confirmDelete}>
-                確定刪除
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ConfirmModal
+        open={deleteId != null}
+        title="刪除潛客"
+        message="確定要刪除這筆潛客嗎？此動作無法復原。"
+        confirmLabel="確定刪除"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
 
       {/* ── Create / Edit drawer ── */}
       {drawer && (
@@ -968,7 +803,7 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
                 </span>
                 <span className="sp" />
                 <button className="cx-dw-iconbtn" onClick={() => setDrawer(null)} aria-label="關閉">
-                  <IconX />
+                  <IconClose />
                 </button>
               </div>
               <div className="cx-emf-hero">

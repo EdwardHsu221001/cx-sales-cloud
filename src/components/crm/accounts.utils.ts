@@ -1,7 +1,11 @@
+import { OWNERS, type OwnerId } from './owners';
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 export type HealthKey = 'good' | 'stable' | 'watch' | 'risk';
-export type OwnerId = 'zhang' | 'chen' | 'lin';
 export type ActType = 'call' | 'mail' | 'meet' | 'note';
+
+// 由 owners.ts 集中維護，re-export 以維持既有匯入點。
+export { OWNERS, type OwnerId };
 
 export interface Contact {
   nm: string;
@@ -67,13 +71,6 @@ export interface AccountValidation {
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-/** 固定三位負責人對照（與其他物件一致的 OwnerId）。 */
-export const OWNERS: Record<OwnerId, { nm: string; av: string; g: string }> = {
-  zhang: { nm: '張志豪', av: '張', g: 'linear-gradient(135deg,#60a5fa,#2563eb)' },
-  chen: { nm: '陳美華', av: '陳', g: 'linear-gradient(135deg,#a78bfa,#7c3aed)' },
-  lin: { nm: '林俊傑', av: '林', g: 'linear-gradient(135deg,#fbbf24,#f59e0b)' },
-};
-
 export const HEALTH_META: Record<HealthKey, { lbl: string }> = {
   good: { lbl: '良好' },
   stable: { lbl: '穩定' },

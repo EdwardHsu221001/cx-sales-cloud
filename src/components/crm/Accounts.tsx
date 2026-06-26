@@ -16,6 +16,26 @@ import {
   type HealthKey,
   type OwnerId,
 } from './accounts.utils';
+import ConfirmModal from './ConfirmModal';
+import SearchPill from './SearchPill';
+import {
+  IconExport,
+  IconPlus,
+  IconCheck,
+  IconClose,
+  IconEdit,
+  IconCalendar,
+  IconOpps,
+  IconEmail,
+  IconPhone,
+  IconLink,
+  IconPin,
+  IconList,
+  IconGrid,
+  IconArrowRight,
+  IconTrash,
+  IconChevron,
+} from './icons';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabId = 'overview' | 'contacts' | 'opps' | 'activity';
@@ -473,142 +493,6 @@ const ACCOUNTS: Account[] = [
   },
 ];
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
-function IconExport() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 15V3M7 8l5-5 5 5" />
-      <path d="M5 21h14" />
-    </svg>
-  );
-}
-function IconPlus() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
-function IconCheck() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-function IconChevronLeft() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
-function IconChevronRight() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  );
-}
-function IconClose() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  );
-}
-function IconEdit() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  );
-}
-function IconCalendar() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="4.5" width="18" height="16" rx="2" />
-      <path d="M3 9h18M8 2.5v4M16 2.5v4" />
-    </svg>
-  );
-}
-function IconOpps() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 17l5-5 4 3 8-8" />
-      <path d="M16 7h4v4" />
-    </svg>
-  );
-}
-function IconEmail() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="2.5" y="5" width="19" height="14" rx="2" />
-      <path d="m3 6.5 9 6 9-6" />
-    </svg>
-  );
-}
-function IconPhone() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z" />
-    </svg>
-  );
-}
-function IconLink() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
-      <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
-    </svg>
-  );
-}
-function IconPin() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  );
-}
-function IconList() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="8" y1="6" x2="21" y2="6" />
-      <line x1="8" y1="12" x2="21" y2="12" />
-      <line x1="8" y1="18" x2="21" y2="18" />
-      <line x1="3" y1="6" x2="3.01" y2="6" />
-      <line x1="3" y1="12" x2="3.01" y2="12" />
-      <line x1="3" y1="18" x2="3.01" y2="18" />
-    </svg>
-  );
-}
-function IconGrid() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-  );
-}
-function IconArrowRight() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m9 6 6 6-6 6" />
-    </svg>
-  );
-}
-function IconTrash() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
-    </svg>
-  );
-}
-
 // ── Form helpers ──────────────────────────────────────────────────────────────
 const EMPTY_DRAFT: AccountDraft = {
   name: '',
@@ -839,15 +723,12 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
             卡片
           </button>
         </div>
-        <div className="cx-fpill cx-lead-search">
-          <input
-            type="search"
-            aria-label="搜尋帳號"
-            placeholder="搜尋名稱或網域"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
+        <SearchPill
+          value={query}
+          onChange={setQuery}
+          label="搜尋帳號"
+          placeholder="搜尋名稱或網域"
+        />
         {[
           {
             label: '產業',
@@ -962,10 +843,10 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
                   </td>
                   <td>
                     <div className="cx-assignee">
-                      <div className="av" style={{ background: own.g }}>
-                        {own.av}
+                      <div className="av" style={{ background: own.gradient }}>
+                        {own.initial}
                       </div>
-                      <span className="nm">{own.nm}</span>
+                      <span className="nm">{own.name}</span>
                     </div>
                   </td>
                   <td>
@@ -992,7 +873,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
           </div>
           <div className="cx-pages">
             <button className="cx-pg nav" disabled>
-              <IconChevronLeft />
+              <IconChevron dir="left" />
             </button>
             {[1, 2, 3].map((n) => (
               <button
@@ -1011,7 +892,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
               7
             </button>
             <button className="cx-pg nav" onClick={() => showToast('下一頁')}>
-              <IconChevronRight />
+              <IconChevron dir="right" />
             </button>
           </div>
         </div>
@@ -1035,10 +916,10 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
                 </span>
                 <div className="sp" />
                 <button className="cx-dw-iconbtn" title="上一筆" onClick={() => navigate(-1)}>
-                  <IconChevronLeft />
+                  <IconChevron dir="left" />
                 </button>
                 <button className="cx-dw-iconbtn" title="下一筆" onClick={() => navigate(1)}>
-                  <IconChevronRight />
+                  <IconChevron dir="right" />
                 </button>
                 <button className="cx-dw-iconbtn" title="關閉" onClick={() => setDrawerId(null)}>
                   <IconClose />
@@ -1144,7 +1025,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
                     <InfoCell label="所在地區" val={account.info.region} />
                     <InfoCell label="公司地址" val={account.info.addr} full icon={<IconPin />} />
                     <InfoCell label="首次合作" val={account.info.since} />
-                    <InfoCell label="負責業務" val={OWNERS[account.owner].nm} />
+                    <InfoCell label="負責業務" val={OWNERS[account.owner].name} />
                   </div>
                 </div>
 
@@ -1242,29 +1123,14 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
       </aside>
 
       {/* ── Delete confirm modal ── */}
-      <div className={`cx-modal-overlay${deleteId != null ? ' open' : ''}`}>
-        <div className="cx-modal" role="dialog" aria-label="刪除確認">
-          <div className="cx-modal-head">
-            <div>
-              <h2>刪除帳號</h2>
-              <div className="ms">確定要刪除這筆客戶帳號嗎？此動作無法復原。</div>
-            </div>
-            <button className="x" onClick={() => setDeleteId(null)}>
-              <IconClose />
-            </button>
-          </div>
-          <div className="cx-modal-foot">
-            <div className="grp">
-              <button className="cx-btn-ghost" onClick={() => setDeleteId(null)}>
-                取消
-              </button>
-              <button className="cx-btn-confirm" onClick={confirmDelete}>
-                確定刪除
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ConfirmModal
+        open={deleteId != null}
+        title="刪除帳號"
+        message="確定要刪除這筆客戶帳號嗎？此動作無法復原。"
+        confirmLabel="確定刪除"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
 
       {/* ── Create / Edit form drawer ── */}
       {draft && (
@@ -1322,7 +1188,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
                   >
                     {(Object.keys(OWNERS) as OwnerId[]).map((k) => (
                       <option key={k} value={k}>
-                        {OWNERS[k].nm}
+                        {OWNERS[k].name}
                       </option>
                     ))}
                   </select>

@@ -1,8 +1,12 @@
+import { OWNERS, type OwnerId } from './owners';
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 export type Score = 'hot' | 'warm' | 'cold';
 export type Status = 'new' | 'contacted' | 'followed' | 'toconvert' | 'overdue' | 'converted';
 export type ContactMethod = 'email' | 'phone';
-export type OwnerId = 'zhang' | 'chen' | 'lin';
+
+// 由 owners.ts 集中維護，re-export 以維持既有匯入點。
+export { OWNERS, type OwnerId };
 
 export interface Lead {
   id: number;
@@ -40,13 +44,6 @@ export interface LeadValidation {
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-/** 固定三位負責人對照（與其他物件一致的 OwnerId）。 */
-export const OWNERS: Record<OwnerId, { name: string; bg: string; initial: string }> = {
-  zhang: { name: '張志豪', bg: 'linear-gradient(135deg,#60a5fa,#2563eb)', initial: '張' },
-  chen: { name: '陳美華', bg: 'linear-gradient(135deg,#a78bfa,#7c3aed)', initial: '陳' },
-  lin: { name: '林俊傑', bg: 'linear-gradient(135deg,#fbbf24,#f59e0b)', initial: '林' },
-};
-
 /** 可手動設定的工作狀態（排除終態 converted，後者僅由轉換動作產生）。 */
 export const WORKING_STATUSES: Status[] = ['new', 'contacted', 'followed', 'toconvert', 'overdue'];
 
@@ -86,7 +83,7 @@ export function materializeLead(draft: LeadDraft, newId: number): Lead {
     score: draft.score,
     status: draft.status,
     source: draft.source,
-    assigneeBg: owner.bg,
+    assigneeBg: owner.gradient,
     assigneeInitial: owner.initial,
     assigneeName: owner.name,
     canConvert: draft.status === 'toconvert',
