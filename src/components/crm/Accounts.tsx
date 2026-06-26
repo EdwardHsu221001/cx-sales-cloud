@@ -1,67 +1,30 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import {
+  filterAccounts,
+  validateAccountDraft,
+  addAccount,
+  editAccount,
+  deleteAccount,
+  OWNERS,
+  HEALTH_META,
+  type Account,
+  type AccountDraft,
+  type Contact,
+  type Activity,
+  type HealthKey,
+  type OwnerId,
+} from './accounts.utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type HealthKey = 'good' | 'stable' | 'watch' | 'risk';
-type OwnerId = 'zhang' | 'chen' | 'lin';
 type TabId = 'overview' | 'contacts' | 'opps' | 'activity';
 type ActType = 'call' | 'mail' | 'meet' | 'note';
 
-interface Contact {
-  nm: string;
-  title: string;
-  pri?: boolean;
-  g: string;
-  av: string;
-}
-interface OppLink {
-  nm: string;
-  stage: string;
-  stageL: string;
-  close: string;
-  amt: string;
-}
-interface Activity {
-  t: ActType;
-  ti: string;
-  d: string;
-  m: string;
-}
-interface Account {
-  logo: string;
-  lg: string;
-  name: string;
-  star: boolean;
-  domain: string;
-  ind: string;
-  size: string;
-  sizeShort: string;
-  amt: string;
-  oppN: number;
-  owner: OwnerId;
-  health: HealthKey;
-  info: { stat: string; web: string; phone: string; addr: string; region: string; since: string };
-  age: string;
-  contacts: Contact[];
-  opps: OppLink[];
-  acts: Activity[];
-}
-
 // ── Static data ───────────────────────────────────────────────────────────────
-const ASSIGNEES: Record<OwnerId, { nm: string; av: string; g: string }> = {
-  zhang: { nm: '張志豪', av: '張', g: 'linear-gradient(135deg,#60a5fa,#2563eb)' },
-  chen: { nm: '陳美華', av: '陳', g: 'linear-gradient(135deg,#a78bfa,#7c3aed)' },
-  lin: { nm: '林俊傑', av: '林', g: 'linear-gradient(135deg,#fbbf24,#f59e0b)' },
-};
-const HEALTH_META: Record<HealthKey, { lbl: string }> = {
-  good: { lbl: '良好' },
-  stable: { lbl: '穩定' },
-  watch: { lbl: '待關注' },
-  risk: { lbl: '風險' },
-};
 const ACCOUNTS: Account[] = [
   {
+    id: 1,
     logo: '台',
     lg: 'linear-gradient(135deg,#2563eb,#1e3a5f)',
     name: '台積電',
@@ -139,6 +102,7 @@ const ACCOUNTS: Account[] = [
     ],
   },
   {
+    id: 2,
     logo: '鴻',
     lg: 'linear-gradient(135deg,#1e3a5f,#122440)',
     name: '鴻海精密',
@@ -202,6 +166,7 @@ const ACCOUNTS: Account[] = [
     ],
   },
   {
+    id: 3,
     logo: '聯',
     lg: 'linear-gradient(135deg,#7c3aed,#5b21b6)',
     name: '聯發科技',
@@ -270,6 +235,7 @@ const ACCOUNTS: Account[] = [
     ],
   },
   {
+    id: 4,
     logo: '緯',
     lg: 'linear-gradient(135deg,#0ea5e9,#0369a1)',
     name: '緯創資通',
@@ -325,6 +291,7 @@ const ACCOUNTS: Account[] = [
     ],
   },
   {
+    id: 5,
     logo: '台',
     lg: 'linear-gradient(135deg,#dc2626,#991b1b)',
     name: '台達電子',
@@ -388,6 +355,7 @@ const ACCOUNTS: Account[] = [
     ],
   },
   {
+    id: 6,
     logo: '研',
     lg: 'linear-gradient(135deg,#059669,#047857)',
     name: '研華科技',
@@ -435,6 +403,7 @@ const ACCOUNTS: Account[] = [
     ],
   },
   {
+    id: 7,
     logo: '華',
     lg: 'linear-gradient(135deg,#0891b2,#0e7490)',
     name: '華碩電腦',
@@ -632,6 +601,48 @@ function IconArrowRight() {
     </svg>
   );
 }
+function IconTrash() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+    </svg>
+  );
+}
+
+// ── Form helpers ──────────────────────────────────────────────────────────────
+const EMPTY_DRAFT: AccountDraft = {
+  name: '',
+  domain: '',
+  ind: '',
+  size: '',
+  owner: 'zhang',
+  health: 'good',
+  stat: '',
+  web: '',
+  phone: '',
+  addr: '',
+  region: '',
+  since: '',
+};
+
+/** 由完整 Account 還原成可編輯草稿（攤平 info 子欄位）。 */
+function accountToDraft(a: Account): AccountDraft {
+  return {
+    id: a.id,
+    name: a.name,
+    domain: a.domain,
+    ind: a.ind,
+    size: a.size,
+    owner: a.owner,
+    health: a.health,
+    stat: a.info.stat,
+    web: a.info.web,
+    phone: a.info.phone,
+    addr: a.info.addr,
+    region: a.info.region,
+    since: a.info.since,
+  };
+}
 
 function ActIcon({ t }: { t: ActType }) {
   const cls = { call: 'cx-ti-call', mail: 'cx-ti-mail', meet: 'cx-ti-meet', note: 'cx-ti-note' }[t];
@@ -647,50 +658,102 @@ function ActIcon({ t }: { t: ActType }) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function Accounts({ showToast }: { showToast: (msg: string) => void }) {
+  const [accounts, setAccounts] = useState<Account[]>(ACCOUNTS);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-  const [drawerIdx, setDrawerIdx] = useState<number | null>(null);
+  const [drawerId, setDrawerId] = useState<number | null>(null);
   const [drawerTab, setDrawerTab] = useState<TabId>('overview');
   const [currentPage, setCurrentPage] = useState(1);
+  const [query, setQuery] = useState('');
+  const [draft, setDraft] = useState<AccountDraft | null>(null);
+  const [drawerTried, setDrawerTried] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const drawerBodyRef = useRef<HTMLDivElement>(null);
 
-  const allSelected = selectedRows.size === ACCOUNTS.length;
-  const account = drawerIdx !== null ? ACCOUNTS[drawerIdx] : null;
+  const filtered = filterAccounts(accounts, query);
+  const allSelected = selectedRows.size === accounts.length && accounts.length > 0;
+  const account = drawerId !== null ? accounts.find((a) => a.id === drawerId) ?? null : null;
+  const draftErrors = draft ? validateAccountDraft(draft) : null;
 
-  function toggleRow(i: number, e: React.MouseEvent) {
+  function toggleRow(id: number, e: React.MouseEvent) {
     e.stopPropagation();
     setSelectedRows((prev) => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
 
   function toggleAll(e: React.MouseEvent) {
     e.stopPropagation();
-    setSelectedRows(allSelected ? new Set() : new Set(ACCOUNTS.map((_, i) => i)));
+    setSelectedRows(allSelected ? new Set() : new Set(accounts.map((a) => a.id)));
   }
 
-  function openDrawer(i: number) {
-    setDrawerIdx(i);
+  function openDrawer(id: number) {
+    setDrawerId(id);
     setDrawerTab('overview');
-    setTimeout(() => drawerBodyRef.current?.scrollTo(0, 0), 0);
+    setTimeout(() => drawerBodyRef.current?.scrollTo?.(0, 0), 0);
   }
 
   function navigate(dir: 1 | -1) {
-    if (drawerIdx === null) return;
-    const next = (drawerIdx + dir + ACCOUNTS.length) % ACCOUNTS.length;
-    setDrawerIdx(next);
+    if (drawerId === null || filtered.length === 0) return;
+    const pos = filtered.findIndex((a) => a.id === drawerId);
+    if (pos === -1) return;
+    const next = filtered[(pos + dir + filtered.length) % filtered.length];
+    setDrawerId(next.id);
     setDrawerTab('overview');
-    setTimeout(() => drawerBodyRef.current?.scrollTo(0, 0), 0);
+    setTimeout(() => drawerBodyRef.current?.scrollTo?.(0, 0), 0);
+  }
+
+  // ── CRUD 表單抽屜 ──
+  function openCreate() {
+    setDrawerTried(false);
+    setDraft({ ...EMPTY_DRAFT });
+  }
+  function openEdit(a: Account) {
+    setDrawerTried(false);
+    setDraft(structuredClone(accountToDraft(a)));
+  }
+  function setField(patch: Partial<AccountDraft>) {
+    setDraft((d) => (d ? { ...d, ...patch } : d));
+  }
+  function saveDraft() {
+    if (!draft) return;
+    if (!validateAccountDraft(draft).ok) {
+      setDrawerTried(true);
+      return;
+    }
+    const isEdit = draft.id != null;
+    setAccounts((list) => (isEdit ? editAccount(list, draft) : addAccount(list, draft, Date.now())));
+    setDraft(null);
+    showToast(isEdit ? `已更新 ${draft.name}` : `已新增 ${draft.name}`);
+  }
+
+  // ── 刪除 ──
+  function confirmDelete() {
+    if (deleteId == null) return;
+    const target = accounts.find((a) => a.id === deleteId);
+    setAccounts((list) => deleteAccount(list, deleteId));
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      next.delete(deleteId);
+      return next;
+    });
+    if (drawerId === deleteId) setDrawerId(null);
+    setDeleteId(null);
+    if (target) showToast(`已刪除 ${target.name}`);
   }
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && drawerIdx !== null) setDrawerIdx(null);
+      if (e.key !== 'Escape') return;
+      if (deleteId != null) setDeleteId(null);
+      else if (draft) setDraft(null);
+      else if (drawerId !== null) setDrawerId(null);
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [drawerIdx]);
+  }, [drawerId, draft, deleteId]);
 
   return (
     <>
@@ -707,7 +770,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
             <IconExport />
             匯出
           </button>
-          <button className="cx-btn-navy" onClick={() => showToast('已開啟「新增帳號」面板')}>
+          <button className="cx-btn-navy" onClick={openCreate}>
             <IconPlus />
             新增帳號
           </button>
@@ -776,6 +839,15 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
             卡片
           </button>
         </div>
+        <div className="cx-fpill cx-lead-search">
+          <input
+            type="search"
+            aria-label="搜尋帳號"
+            placeholder="搜尋名稱或網域"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
         {[
           {
             label: '產業',
@@ -795,7 +867,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
           </div>
         ))}
         <div className="cx-filter-count">
-          共 <b>48</b> 家
+          共 <b>{filtered.length}</b> 家
         </div>
       </div>
 
@@ -829,19 +901,26 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
             </tr>
           </thead>
           <tbody>
-            {ACCOUNTS.map((a, i) => {
-              const own = ASSIGNEES[a.owner];
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={8} className="cx-empty-row">
+                  找不到符合『{query}』的帳號
+                </td>
+              </tr>
+            )}
+            {filtered.map((a) => {
+              const own = OWNERS[a.owner];
               const h = HEALTH_META[a.health];
               return (
                 <tr
-                  key={i}
-                  className={selectedRows.has(i) ? 'sel' : ''}
-                  onClick={() => openDrawer(i)}
+                  key={a.id}
+                  className={selectedRows.has(a.id) ? 'sel' : ''}
+                  onClick={() => openDrawer(a.id)}
                 >
                   <td>
                     <div
-                      className={`cx-chk row-chk${selectedRows.has(i) ? ' on' : ''}`}
-                      onClick={(e) => toggleRow(i, e)}
+                      className={`cx-chk row-chk${selectedRows.has(a.id) ? ' on' : ''}`}
+                      onClick={(e) => toggleRow(a.id, e)}
                     >
                       <IconCheck />
                     </div>
@@ -909,7 +988,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
         {/* Pagination */}
         <div className="cx-pager">
           <div className="info">
-            顯示第 <b>1–7</b> 家，共 <b>48</b> 家
+            顯示第 <b>1–{filtered.length}</b> 家，共 <b>{filtered.length}</b> 家
           </div>
           <div className="cx-pages">
             <button className="cx-pg nav" disabled>
@@ -940,12 +1019,12 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
 
       {/* Drawer scrim */}
       <div
-        className={`cx-drawer-scrim${drawerIdx !== null ? ' open' : ''}`}
-        onClick={() => setDrawerIdx(null)}
+        className={`cx-drawer-scrim${drawerId !== null ? ' open' : ''}`}
+        onClick={() => setDrawerId(null)}
       />
 
       {/* Drawer */}
-      <aside className={`cx-drawer${drawerIdx !== null ? ' open' : ''}`}>
+      <aside className={`cx-drawer${drawerId !== null ? ' open' : ''}`}>
         {account && (
           <>
             <div className="cx-dw-top">
@@ -961,7 +1040,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
                 <button className="cx-dw-iconbtn" title="下一筆" onClick={() => navigate(1)}>
                   <IconChevronRight />
                 </button>
-                <button className="cx-dw-iconbtn" title="關閉" onClick={() => setDrawerIdx(null)}>
+                <button className="cx-dw-iconbtn" title="關閉" onClick={() => setDrawerId(null)}>
                   <IconClose />
                 </button>
               </div>
@@ -989,12 +1068,17 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
                     <IconCalendar />
                     記錄活動
                   </button>
-                  <button
-                    className="cx-btn-sm pri"
-                    onClick={() => showToast('已開啟「編輯帳號」面板')}
-                  >
+                  <button className="cx-btn-sm pri" onClick={() => openEdit(account)}>
                     <IconEdit />
                     編輯
+                  </button>
+                  <button
+                    className="cx-btn-sm danger"
+                    aria-label="刪除帳號"
+                    onClick={() => setDeleteId(account.id)}
+                  >
+                    <IconTrash />
+                    刪除
                   </button>
                 </div>
               </div>
@@ -1046,7 +1130,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
                   <div className="sh">
                     <h3>公司資訊</h3>
                     <div className="sp" />
-                    <span className="add" onClick={() => showToast('已開啟「編輯帳號」面板')}>
+                    <span className="add" onClick={() => openEdit(account)}>
                       <IconEdit />
                       編輯
                     </span>
@@ -1060,7 +1144,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
                     <InfoCell label="所在地區" val={account.info.region} />
                     <InfoCell label="公司地址" val={account.info.addr} full icon={<IconPin />} />
                     <InfoCell label="首次合作" val={account.info.since} />
-                    <InfoCell label="負責業務" val={ASSIGNEES[account.owner].nm} />
+                    <InfoCell label="負責業務" val={OWNERS[account.owner].nm} />
                   </div>
                 </div>
 
@@ -1156,6 +1240,154 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
           </>
         )}
       </aside>
+
+      {/* ── Delete confirm modal ── */}
+      <div className={`cx-modal-overlay${deleteId != null ? ' open' : ''}`}>
+        <div className="cx-modal" role="dialog" aria-label="刪除確認">
+          <div className="cx-modal-head">
+            <div>
+              <h2>刪除帳號</h2>
+              <div className="ms">確定要刪除這筆客戶帳號嗎？此動作無法復原。</div>
+            </div>
+            <button className="x" onClick={() => setDeleteId(null)}>
+              <IconClose />
+            </button>
+          </div>
+          <div className="cx-modal-foot">
+            <div className="grp">
+              <button className="cx-btn-ghost" onClick={() => setDeleteId(null)}>
+                取消
+              </button>
+              <button className="cx-btn-confirm" onClick={confirmDelete}>
+                確定刪除
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Create / Edit form drawer ── */}
+      {draft && (
+        <>
+          <div className="cx-drawer-scrim open" onClick={() => setDraft(null)} />
+          <aside className="cx-drawer open" aria-label={draft.id != null ? '編輯帳號' : '新增帳號'}>
+            <div className="cx-dw-top">
+              <div className="cx-dw-bar">
+                <span className="crumb">
+                  <b>客戶帳號</b> ／ {draft.id != null ? '編輯' : '新增'}
+                </span>
+                <div className="sp" />
+                <button className="cx-dw-iconbtn" aria-label="關閉" onClick={() => setDraft(null)}>
+                  <IconClose />
+                </button>
+              </div>
+              <div className="cx-emf-hero">
+                <h2>{draft.id != null ? '編輯帳號' : '新增帳號'}</h2>
+              </div>
+            </div>
+
+            <div className="cx-dw-body cx-emf-body">
+              <div className="cx-emf-grid">
+                <label className="cx-emf-field span2">
+                  <span className="l">名稱</span>
+                  <input value={draft.name} onChange={(e) => setField({ name: e.target.value })} />
+                  {drawerTried && draftErrors?.nameError && (
+                    <span className="err">{draftErrors.nameError}</span>
+                  )}
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">網域</span>
+                  <input
+                    value={draft.domain}
+                    onChange={(e) => setField({ domain: e.target.value })}
+                  />
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">產業</span>
+                  <input value={draft.ind} onChange={(e) => setField({ ind: e.target.value })} />
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">規模</span>
+                  <input value={draft.size} onChange={(e) => setField({ size: e.target.value })} />
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">負責業務</span>
+                  <select
+                    value={draft.owner}
+                    onChange={(e) => setField({ owner: e.target.value as OwnerId })}
+                  >
+                    {(Object.keys(OWNERS) as OwnerId[]).map((k) => (
+                      <option key={k} value={k}>
+                        {OWNERS[k].nm}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">健康度</span>
+                  <select
+                    value={draft.health}
+                    onChange={(e) => setField({ health: e.target.value as HealthKey })}
+                  >
+                    {(Object.keys(HEALTH_META) as HealthKey[]).map((k) => (
+                      <option key={k} value={k}>
+                        {HEALTH_META[k].lbl}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">統一編號</span>
+                  <input value={draft.stat} onChange={(e) => setField({ stat: e.target.value })} />
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">官方網站</span>
+                  <input value={draft.web} onChange={(e) => setField({ web: e.target.value })} />
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">聯絡電話</span>
+                  <input value={draft.phone} onChange={(e) => setField({ phone: e.target.value })} />
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">所在地區</span>
+                  <input
+                    value={draft.region}
+                    onChange={(e) => setField({ region: e.target.value })}
+                  />
+                </label>
+
+                <label className="cx-emf-field span2">
+                  <span className="l">公司地址</span>
+                  <input value={draft.addr} onChange={(e) => setField({ addr: e.target.value })} />
+                </label>
+
+                <label className="cx-emf-field span2">
+                  <span className="l">首次合作</span>
+                  <input value={draft.since} onChange={(e) => setField({ since: e.target.value })} />
+                </label>
+              </div>
+            </div>
+
+            <div className="cx-emf-foot">
+              <button className="cx-btn-outline" onClick={() => setDraft(null)}>
+                取消
+              </button>
+              <button className="cx-btn-navy" onClick={saveDraft}>
+                儲存
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
     </>
   );
 }
