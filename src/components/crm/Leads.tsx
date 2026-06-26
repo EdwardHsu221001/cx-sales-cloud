@@ -20,6 +20,7 @@ import {
 } from './leads.utils';
 import ConfirmModal from './ConfirmModal';
 import SearchPill from './SearchPill';
+import { useRowSelection } from './useRowSelection';
 import {
   IconDownload,
   IconPlus,
@@ -184,8 +185,9 @@ function leadToDraft(lead: Lead): LeadDraft {
 export default function Leads({ showToast }: { showToast: (msg: string) => void }) {
   const [leads, setLeads] = useState<Lead[]>(LEADS);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-  const [allSelected, setAllSelected] = useState(false);
+  const { isSelected, allSelected, toggle: toggleRow, toggleAll } = useRowSelection(
+    leads.map((l) => l.id),
+  );
   const [modal, setModal] = useState<null | {
     id: number;
     name: string;
@@ -234,26 +236,6 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
   }, [rowMenuId]);
-
-  const toggleRow = (id: number) => {
-    setSelectedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      setAllSelected(next.size === leads.length);
-      return next;
-    });
-  };
-
-  const toggleAll = () => {
-    if (allSelected) {
-      setSelectedRows(new Set());
-      setAllSelected(false);
-    } else {
-      setSelectedRows(new Set(leads.map((l) => l.id)));
-      setAllSelected(true);
-    }
-  };
 
   // ── CRUD 抽屜 ──
   const openCreate = () => {
@@ -511,10 +493,10 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
               </tr>
             )}
             {filtered.map((lead) => (
-              <tr key={lead.id} className={selectedRows.has(lead.id) ? 'sel' : ''}>
+              <tr key={lead.id} className={isSelected(lead.id) ? 'sel' : ''}>
                 <td>
                   <div
-                    className={`cx-chk${selectedRows.has(lead.id) ? ' on' : ''}`}
+                    className={`cx-chk${isSelected(lead.id) ? ' on' : ''}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleRow(lead.id);

@@ -18,6 +18,7 @@ import {
 } from './accounts.utils';
 import ConfirmModal from './ConfirmModal';
 import SearchPill from './SearchPill';
+import { useRowSelection } from './useRowSelection';
 import {
   IconExport,
   IconPlus,
@@ -543,7 +544,6 @@ function ActIcon({ t }: { t: ActType }) {
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function Accounts({ showToast }: { showToast: (msg: string) => void }) {
   const [accounts, setAccounts] = useState<Account[]>(ACCOUNTS);
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [drawerId, setDrawerId] = useState<number | null>(null);
   const [drawerTab, setDrawerTab] = useState<TabId>('overview');
   const [currentPage, setCurrentPage] = useState(1);
@@ -554,24 +554,11 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
   const drawerBodyRef = useRef<HTMLDivElement>(null);
 
   const filtered = filterAccounts(accounts, query);
-  const allSelected = selectedRows.size === accounts.length && accounts.length > 0;
+  const { isSelected, allSelected, toggle, toggleAll, deselect } = useRowSelection(
+    accounts.map((a) => a.id),
+  );
   const account = drawerId !== null ? accounts.find((a) => a.id === drawerId) ?? null : null;
   const draftErrors = draft ? validateAccountDraft(draft) : null;
-
-  function toggleRow(id: number, e: React.MouseEvent) {
-    e.stopPropagation();
-    setSelectedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleAll(e: React.MouseEvent) {
-    e.stopPropagation();
-    setSelectedRows(allSelected ? new Set() : new Set(accounts.map((a) => a.id)));
-  }
 
   function openDrawer(id: number) {
     setDrawerId(id);
@@ -618,11 +605,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
     if (deleteId == null) return;
     const target = accounts.find((a) => a.id === deleteId);
     setAccounts((list) => deleteAccount(list, deleteId));
-    setSelectedRows((prev) => {
-      const next = new Set(prev);
-      next.delete(deleteId);
-      return next;
-    });
+    deselect(deleteId);
     if (drawerId === deleteId) setDrawerId(null);
     setDeleteId(null);
     if (target) showToast(`已刪除 ${target.name}`);
@@ -768,7 +751,13 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
           <thead>
             <tr>
               <th>
-                <div className={`cx-chk${allSelected ? ' on' : ''}`} onClick={toggleAll}>
+                <div
+                  className={`cx-chk${allSelected ? ' on' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleAll();
+                  }}
+                >
                   <IconCheck />
                 </div>
               </th>
@@ -795,13 +784,16 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
               return (
                 <tr
                   key={a.id}
-                  className={selectedRows.has(a.id) ? 'sel' : ''}
+                  className={isSelected(a.id) ? 'sel' : ''}
                   onClick={() => openDrawer(a.id)}
                 >
                   <td>
                     <div
-                      className={`cx-chk row-chk${selectedRows.has(a.id) ? ' on' : ''}`}
-                      onClick={(e) => toggleRow(a.id, e)}
+                      className={`cx-chk row-chk${isSelected(a.id) ? ' on' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggle(a.id);
+                      }}
                     >
                       <IconCheck />
                     </div>
