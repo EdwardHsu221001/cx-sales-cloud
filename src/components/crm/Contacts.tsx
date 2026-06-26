@@ -1,80 +1,29 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-type OwnerId = 'zhang' | 'chen' | 'lin';
-type CoId = 'tsmc' | 'fox' | 'mtk' | 'wis' | 'delta' | 'asus';
-type ActType = 'call' | 'mail' | 'meet' | 'note';
-
-interface OppLink {
-  nm: string;
-  stage: string;
-  stageL: string;
-  amt: string;
-}
-interface Activity {
-  t: ActType;
-  ti: string;
-  d: string;
-  m: string;
-}
-interface Contact {
-  av: string;
-  g: string;
-  nm: string;
-  title: string;
-  role: string;
-  co: CoId;
-  pri: boolean;
-  owner: OwnerId;
-  email: string;
-  phone: string;
-  mobile: string;
-  last: string;
-  ago: string;
-  opps: OppLink[];
-  acts: Activity[];
-}
+import {
+  filterContacts,
+  validateContactDraft,
+  addContact,
+  editContact,
+  deleteContact,
+  CO,
+  OWNERS,
+  ROLE_OPTIONS,
+  type Contact,
+  type ContactDraft,
+  type CoId,
+  type OwnerId,
+} from './contacts.utils';
+import ConfirmModal from './ConfirmModal';
+import SearchPill from './SearchPill';
+import { useRowSelection } from './useRowSelection';
+import { IconEdit, IconTrash } from './icons';
 
 // ── Static data ───────────────────────────────────────────────────────────────
-const ASSIGNEES: Record<OwnerId, { nm: string; av: string; g: string }> = {
-  zhang: { nm: '張志豪', av: '張', g: 'linear-gradient(135deg,#60a5fa,#2563eb)' },
-  chen: { nm: '陳美華', av: '陳', g: 'linear-gradient(135deg,#a78bfa,#7c3aed)' },
-  lin: { nm: '林俊傑', av: '林', g: 'linear-gradient(135deg,#fbbf24,#f59e0b)' },
-};
-
-const CO: Record<CoId, { nm: string; logo: string; g: string; ind: string }> = {
-  tsmc: { nm: '台積電', logo: '台', g: 'linear-gradient(135deg,#2563eb,#1e3a5f)', ind: '半導體' },
-  fox: {
-    nm: '鴻海精密',
-    logo: '鴻',
-    g: 'linear-gradient(135deg,#1e3a5f,#122440)',
-    ind: '電子製造',
-  },
-  mtk: { nm: '聯發科技', logo: '聯', g: 'linear-gradient(135deg,#7c3aed,#5b21b6)', ind: 'IC 設計' },
-  wis: {
-    nm: '緯創資通',
-    logo: '緯',
-    g: 'linear-gradient(135deg,#0ea5e9,#0369a1)',
-    ind: '電子製造',
-  },
-  delta: {
-    nm: '台達電子',
-    logo: '台',
-    g: 'linear-gradient(135deg,#dc2626,#991b1b)',
-    ind: '電源管理',
-  },
-  asus: {
-    nm: '華碩電腦',
-    logo: '華',
-    g: 'linear-gradient(135deg,#0891b2,#0e7490)',
-    ind: '消費電子',
-  },
-};
-
 const CONTACTS: Contact[] = [
   {
+    id: 1,
     av: '王',
     g: 'linear-gradient(135deg,#60a5fa,#2563eb)',
     nm: '王俊傑',
@@ -108,6 +57,7 @@ const CONTACTS: Contact[] = [
     ],
   },
   {
+    id: 2,
     av: '李',
     g: 'linear-gradient(135deg,#34D399,#10b981)',
     nm: '李欣怡',
@@ -127,6 +77,7 @@ const CONTACTS: Contact[] = [
     ],
   },
   {
+    id: 3,
     av: '陳',
     g: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
     nm: '陳冠宇',
@@ -151,6 +102,7 @@ const CONTACTS: Contact[] = [
     ],
   },
   {
+    id: 4,
     av: '吳',
     g: 'linear-gradient(135deg,#60a5fa,#2563eb)',
     nm: '吳孟潔',
@@ -175,6 +127,7 @@ const CONTACTS: Contact[] = [
     ],
   },
   {
+    id: 5,
     av: '林',
     g: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
     nm: '林佳蓉',
@@ -199,6 +152,7 @@ const CONTACTS: Contact[] = [
     ],
   },
   {
+    id: 6,
     av: '黃',
     g: 'linear-gradient(135deg,#34D399,#10b981)',
     nm: '黃信宏',
@@ -218,6 +172,7 @@ const CONTACTS: Contact[] = [
     ],
   },
   {
+    id: 7,
     av: '黃',
     g: 'linear-gradient(135deg,#34D399,#10b981)',
     nm: '黃柏翰',
@@ -242,6 +197,7 @@ const CONTACTS: Contact[] = [
     ],
   },
   {
+    id: 8,
     av: '劉',
     g: 'linear-gradient(135deg,#22d3ee,#0891b2)',
     nm: '劉雅琪',
@@ -276,6 +232,35 @@ const ROLE_TAG: Record<string, string> = {
   技術窗口: '技術',
   使用者: '使用者',
 };
+
+// ── Form helpers ──────────────────────────────────────────────────────────────
+const EMPTY_DRAFT: ContactDraft = {
+  nm: '',
+  title: '',
+  role: ROLE_OPTIONS[0],
+  co: 'tsmc',
+  owner: 'zhang',
+  email: '',
+  phone: '',
+  mobile: '',
+  pri: false,
+};
+
+/** 由完整 Contact 還原成可編輯草稿。 */
+function contactToDraft(c: Contact): ContactDraft {
+  return {
+    id: c.id,
+    nm: c.nm,
+    title: c.title,
+    role: c.role,
+    co: c.co,
+    owner: c.owner,
+    email: c.email,
+    phone: c.phone,
+    mobile: c.mobile,
+    pri: c.pri,
+  };
+}
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
 const IcPlus = () => (
@@ -402,84 +387,87 @@ const IcUser = () => (
   </svg>
 );
 
-// ── Activity icon map ─────────────────────────────────────────────────────────
-function ActIcon({ t }: { t: ActType }) {
-  const cls = { call: 'cx-ti-call', mail: 'cx-ti-mail', meet: 'cx-ti-meet', note: 'cx-ti-note' }[t];
-  return (
-    <div
-      className={`cx-tl-item .ti ${cls}`}
-      style={{
-        width: 32,
-        height: 32,
-        borderRadius: 9,
-        display: 'grid',
-        placeItems: 'center',
-        flexShrink: 0,
-        zIndex: 1,
-      }}
-    >
-      {t === 'call' && <IcPhone />}
-      {t === 'mail' && <IcMail />}
-      {t === 'meet' && <IcCal />}
-      {t === 'note' && <IcNote />}
-    </div>
-  );
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Contacts({ showToast }: { showToast: (msg: string) => void }) {
   const [view, setView] = useState<'list' | 'grid'>('list');
-  const [selRows, setSelRows] = useState<Set<number>>(new Set());
-  const [selCards, setSelCards] = useState<Set<number>>(new Set());
-  const [drawerIdx, setDrawerIdx] = useState<number | null>(null);
+  const [contacts, setContacts] = useState<Contact[]>(CONTACTS);
+  const [drawerId, setDrawerId] = useState<number | null>(null);
   const [activePg, setActivePg] = useState(1);
+  const [query, setQuery] = useState('');
+  const [draft, setDraft] = useState<ContactDraft | null>(null);
+  const [drawerTried, setDrawerTried] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const drawerBodyRef = useRef<HTMLDivElement>(null);
 
-  const allChecked = selRows.size === CONTACTS.length;
+  const filtered = filterContacts(contacts, query);
+  const { isSelected, allSelected, toggle, toggleAll, deselect } = useRowSelection(
+    filtered.map((c) => c.id),
+  );
+  const draftErrors = draft ? validateContactDraft(draft) : null;
 
-  const toggleRow = (i: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelRows((prev) => {
-      const s = new Set(prev);
-      s.has(i) ? s.delete(i) : s.add(i);
-      return s;
-    });
-  };
-  const toggleAll = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelRows(allChecked ? new Set() : new Set(CONTACTS.map((_, i) => i)));
-  };
-  const toggleCard = (i: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelCards((prev) => {
-      const s = new Set(prev);
-      s.has(i) ? s.delete(i) : s.add(i);
-      return s;
-    });
-  };
-
-  const openDrawer = (i: number) => setDrawerIdx(i);
-  const closeDrawer = useCallback(() => setDrawerIdx(null), []);
+  const openDrawer = (id: number) => setDrawerId(id);
+  const closeDrawer = useCallback(() => setDrawerId(null), []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeDrawer();
+      if (e.key !== 'Escape') return;
+      if (deleteId != null) setDeleteId(null);
+      else if (draft) setDraft(null);
+      else closeDrawer();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [closeDrawer]);
+  }, [closeDrawer, deleteId, draft]);
 
   useEffect(() => {
-    if (drawerIdx !== null && drawerBodyRef.current) drawerBodyRef.current.scrollTop = 0;
-  }, [drawerIdx]);
+    if (drawerId !== null && drawerBodyRef.current) drawerBodyRef.current.scrollTop = 0;
+  }, [drawerId]);
 
-  const prevContact = () =>
-    setDrawerIdx((i) => (i !== null ? (i - 1 + CONTACTS.length) % CONTACTS.length : null));
-  const nextContact = () => setDrawerIdx((i) => (i !== null ? (i + 1) % CONTACTS.length : null));
+  const navContact = (dir: 1 | -1) => {
+    if (drawerId === null || filtered.length === 0) return;
+    const pos = filtered.findIndex((c) => c.id === drawerId);
+    if (pos === -1) return;
+    setDrawerId(filtered[(pos + dir + filtered.length) % filtered.length].id);
+  };
 
-  const contact = drawerIdx !== null ? CONTACTS[drawerIdx] : null;
+  // ── CRUD 表單抽屜 ──
+  const openCreate = () => {
+    setDrawerTried(false);
+    setDraft({ ...EMPTY_DRAFT });
+  };
+  const openEdit = (c: Contact) => {
+    setDrawerTried(false);
+    setDraft(structuredClone(contactToDraft(c)));
+  };
+  const setField = (patch: Partial<ContactDraft>) => setDraft((d) => (d ? { ...d, ...patch } : d));
+  const saveDraft = () => {
+    if (!draft) return;
+    if (!validateContactDraft(draft).ok) {
+      setDrawerTried(true);
+      return;
+    }
+    const isEdit = draft.id != null;
+    setContacts((list) =>
+      isEdit ? editContact(list, draft) : addContact(list, draft, Date.now()),
+    );
+    setDraft(null);
+    showToast(isEdit ? `已更新 ${draft.nm}` : `已新增 ${draft.nm}`);
+  };
+
+  // ── 刪除 ──
+  const confirmDelete = () => {
+    if (deleteId == null) return;
+    const target = contacts.find((c) => c.id === deleteId);
+    setContacts((list) => deleteContact(list, deleteId));
+    deselect(deleteId);
+    if (drawerId === deleteId) setDrawerId(null);
+    setDeleteId(null);
+    if (target) showToast(`已刪除 ${target.nm}`);
+  };
+
+  const contact = drawerId !== null ? contacts.find((c) => c.id === drawerId) ?? null : null;
   const co = contact ? CO[contact.co] : null;
-  const own = contact ? ASSIGNEES[contact.owner] : null;
+  const own = contact ? OWNERS[contact.owner] : null;
 
   return (
     <>
@@ -496,7 +484,7 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
             <IcExport />
             匯出
           </button>
-          <button className="cx-btn-navy" onClick={() => showToast('已開啟「新增聯絡人」面板')}>
+          <button className="cx-btn-navy" onClick={openCreate}>
             <IcPlus />
             新增聯絡人
           </button>
@@ -555,6 +543,12 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
             卡片
           </button>
         </div>
+        <SearchPill
+          value={query}
+          onChange={setQuery}
+          label="搜尋聯絡人"
+          placeholder="搜尋姓名、公司或 Email"
+        />
         {(['公司', '職務', '負責業務'] as const).map((label) => (
           <div key={label} className="cx-fpill">
             <span className="fl">{label}</span>
@@ -590,7 +584,7 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
           </div>
         ))}
         <div className="cx-filter-count">
-          共 <b>126</b> 人
+          共 <b>{filtered.length}</b> 位
         </div>
       </div>
 
@@ -610,7 +604,13 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
             <thead>
               <tr>
                 <th>
-                  <div className={`cx-chk${allChecked ? ' on' : ''}`} onClick={toggleAll}>
+                  <div
+                    className={`cx-chk${allSelected ? ' on' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleAll();
+                    }}
+                  >
                     <IcChk />
                   </div>
                 </th>
@@ -623,15 +623,29 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
               </tr>
             </thead>
             <tbody>
-              {CONTACTS.map((c, i) => {
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="cx-empty-row">
+                    找不到符合『{query}』的聯絡人
+                  </td>
+                </tr>
+              )}
+              {filtered.map((c) => {
                 const company = CO[c.co];
-                const assignee = ASSIGNEES[c.owner];
+                const assignee = OWNERS[c.owner];
                 return (
-                  <tr key={i} className={selRows.has(i) ? 'sel' : ''} onClick={() => openDrawer(i)}>
+                  <tr
+                    key={c.id}
+                    className={isSelected(c.id) ? 'sel' : ''}
+                    onClick={() => openDrawer(c.id)}
+                  >
                     <td>
                       <div
-                        className={`cx-chk${selRows.has(i) ? ' on' : ''}`}
-                        onClick={(e) => toggleRow(i, e)}
+                        className={`cx-chk${isSelected(c.id) ? ' on' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggle(c.id);
+                        }}
                       >
                         <IcChk />
                       </div>
@@ -685,10 +699,10 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
                     </td>
                     <td>
                       <div className="cx-assignee">
-                        <div className="av" style={{ background: assignee.g }}>
-                          {assignee.av}
+                        <div className="av" style={{ background: assignee.gradient }}>
+                          {assignee.initial}
                         </div>
-                        <span className="nm">{assignee.nm}</span>
+                        <span className="nm">{assignee.name}</span>
                       </div>
                     </td>
                     <td>
@@ -706,7 +720,7 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
           {/* Pagination */}
           <div className="cx-pager">
             <div className="info">
-              顯示第 <b>1–8</b> 人，共 <b>126</b> 人
+              顯示第 <b>1–{filtered.length}</b> 位，共 <b>{filtered.length}</b> 位
             </div>
             <div className="cx-pages">
               <button className="cx-pg nav" disabled>
@@ -739,16 +753,22 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
       {/* ── Card grid ── */}
       {view === 'grid' && (
         <div className="cx-ct-grid">
-          {CONTACTS.map((c, i) => {
+          {filtered.length === 0 && (
+            <div className="cx-empty-row">找不到符合『{query}』的聯絡人</div>
+          )}
+          {filtered.map((c) => {
             const company = CO[c.co];
-            const assignee = ASSIGNEES[c.owner];
+            const assignee = OWNERS[c.owner];
             return (
-              <div key={i} className="cx-pcard" onClick={() => openDrawer(i)}>
+              <div key={c.id} className="cx-pcard" onClick={() => openDrawer(c.id)}>
                 {c.pri && <span className="cx-pri-flag">主要窗口</span>}
                 <div className="pc-chk">
                   <div
-                    className={`cx-chk${selCards.has(i) ? ' on' : ''}`}
-                    onClick={(e) => toggleCard(i, e)}
+                    className={`cx-chk${isSelected(c.id) ? ' on' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggle(c.id);
+                    }}
                   >
                     <IcChk />
                   </div>
@@ -779,10 +799,10 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
                 </div>
                 <div className="pc-foot">
                   <div className="pc-owner">
-                    <div className="av" style={{ background: assignee.g }}>
-                      {assignee.av}
+                    <div className="av" style={{ background: assignee.gradient }}>
+                      {assignee.initial}
                     </div>
-                    {assignee.nm}
+                    {assignee.name}
                   </div>
                   <div className="ml" style={{ fontSize: 11.5, color: 'var(--cx-text-faint)' }}>
                     {c.ago}
@@ -796,10 +816,10 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
 
       {/* ── Detail drawer ── */}
       <div
-        className={`cx-drawer-scrim${drawerIdx !== null ? ' open' : ''}`}
+        className={`cx-drawer-scrim${drawerId !== null ? ' open' : ''}`}
         onClick={closeDrawer}
       />
-      <aside className={`cx-drawer cx-ct-drawer${drawerIdx !== null ? ' open' : ''}`}>
+      <aside className={`cx-drawer cx-ct-drawer${drawerId !== null ? ' open' : ''}`}>
         {contact && co && own && (
           <>
             <div className="cx-ct-dw-top">
@@ -809,10 +829,10 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
                   <b>聯絡人</b> ／ {contact.nm}
                 </span>
                 <div className="sp" style={{ flex: 1 }} />
-                <button className="cx-dw-iconbtn" title="上一筆" onClick={prevContact}>
+                <button className="cx-dw-iconbtn" title="上一筆" onClick={() => navContact(-1)}>
                   <IcChevL />
                 </button>
-                <button className="cx-dw-iconbtn" title="下一筆" onClick={nextContact}>
+                <button className="cx-dw-iconbtn" title="下一筆" onClick={() => navContact(1)}>
                   <IcChevR />
                 </button>
                 <button className="cx-dw-iconbtn" title="關閉" onClick={closeDrawer}>
@@ -853,6 +873,18 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
                 <button className="cx-btn-sm" onClick={() => showToast('已開啟「記錄活動」面板')}>
                   <IcCal />
                   記錄
+                </button>
+                <button className="cx-btn-sm" onClick={() => openEdit(contact)}>
+                  <IconEdit />
+                  編輯
+                </button>
+                <button
+                  className="cx-btn-sm danger"
+                  aria-label="刪除聯絡人"
+                  onClick={() => setDeleteId(contact.id)}
+                >
+                  <IconTrash />
+                  刪除
                 </button>
               </div>
             </div>
@@ -896,7 +928,7 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
                     <div className="cl">負責業務</div>
                     <div className="cv">
                       <IcUser />
-                      {own.nm}
+                      {own.name}
                     </div>
                   </div>
                 </div>
@@ -965,6 +997,134 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
           </>
         )}
       </aside>
+
+      {/* ── Delete confirm modal ── */}
+      <ConfirmModal
+        open={deleteId != null}
+        title="刪除聯絡人"
+        message="確定要刪除這位聯絡人嗎？此動作無法復原。"
+        confirmLabel="確定刪除"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
+
+      {/* ── Create / Edit form drawer ── */}
+      {draft && (
+        <>
+          <div className="cx-drawer-scrim open" onClick={() => setDraft(null)} />
+          <aside className="cx-drawer open" aria-label={draft.id != null ? '編輯聯絡人' : '新增聯絡人'}>
+            <div className="cx-dw-top">
+              <div className="cx-dw-bar">
+                <span className="crumb">
+                  <b>聯絡人</b> ／ {draft.id != null ? '編輯' : '新增'}
+                </span>
+                <div className="sp" style={{ flex: 1 }} />
+                <button className="cx-dw-iconbtn" aria-label="關閉" onClick={() => setDraft(null)}>
+                  <IcX />
+                </button>
+              </div>
+              <div className="cx-emf-hero">
+                <h2>{draft.id != null ? '編輯聯絡人' : '新增聯絡人'}</h2>
+              </div>
+            </div>
+
+            <div className="cx-dw-body cx-emf-body">
+              <div className="cx-emf-grid">
+                <label className="cx-emf-field span2">
+                  <span className="l">姓名</span>
+                  <input value={draft.nm} onChange={(e) => setField({ nm: e.target.value })} />
+                  {drawerTried && draftErrors?.nameError && (
+                    <span className="err">{draftErrors.nameError}</span>
+                  )}
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">職稱</span>
+                  <input value={draft.title} onChange={(e) => setField({ title: e.target.value })} />
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">角色</span>
+                  <select value={draft.role} onChange={(e) => setField({ role: e.target.value })}>
+                    {ROLE_OPTIONS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">所屬公司</span>
+                  <select
+                    value={draft.co}
+                    onChange={(e) => setField({ co: e.target.value as CoId })}
+                  >
+                    {(Object.keys(CO) as CoId[]).map((k) => (
+                      <option key={k} value={k}>
+                        {CO[k].nm}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">負責業務</span>
+                  <select
+                    value={draft.owner}
+                    onChange={(e) => setField({ owner: e.target.value as OwnerId })}
+                  >
+                    {(Object.keys(OWNERS) as OwnerId[]).map((k) => (
+                      <option key={k} value={k}>
+                        {OWNERS[k].name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="cx-emf-field span2">
+                  <span className="l">Email</span>
+                  <input value={draft.email} onChange={(e) => setField({ email: e.target.value })} />
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">公司分機</span>
+                  <input value={draft.phone} onChange={(e) => setField({ phone: e.target.value })} />
+                </label>
+
+                <label className="cx-emf-field">
+                  <span className="l">行動電話</span>
+                  <input
+                    value={draft.mobile}
+                    onChange={(e) => setField({ mobile: e.target.value })}
+                  />
+                </label>
+
+                <div className="cx-emf-field span2">
+                  <span className="l">主要窗口</span>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      type="checkbox"
+                      checked={draft.pri}
+                      onChange={(e) => setField({ pri: e.target.checked })}
+                    />
+                    <span className="t">設為此公司主要窗口</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="cx-emf-foot">
+              <button className="cx-btn-outline" onClick={() => setDraft(null)}>
+                取消
+              </button>
+              <button className="cx-btn-navy" onClick={saveDraft}>
+                儲存
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
     </>
   );
 }
