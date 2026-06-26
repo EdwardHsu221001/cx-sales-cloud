@@ -20,6 +20,7 @@ import {
 } from './leads.utils';
 import ConfirmModal from './ConfirmModal';
 import SearchPill from './SearchPill';
+import FormDrawer from './FormDrawer';
 import { useRowSelection } from './useRowSelection';
 import {
   IconDownload,
@@ -185,9 +186,12 @@ function leadToDraft(lead: Lead): LeadDraft {
 export default function Leads({ showToast }: { showToast: (msg: string) => void }) {
   const [leads, setLeads] = useState<Lead[]>(LEADS);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const { isSelected, allSelected, toggle: toggleRow, toggleAll } = useRowSelection(
-    leads.map((l) => l.id),
-  );
+  const {
+    isSelected,
+    allSelected,
+    toggle: toggleRow,
+    toggleAll,
+  } = useRowSelection(leads.map((l) => l.id));
   const [modal, setModal] = useState<null | {
     id: number;
     name: string;
@@ -770,148 +774,114 @@ export default function Leads({ showToast }: { showToast: (msg: string) => void 
         onCancel={() => setDeleteId(null)}
       />
 
-      {/* ── Create / Edit drawer ── */}
+      {/* ── Create / Edit form drawer ── */}
       {drawer && (
-        <>
-          <div className="cx-drawer-scrim open" onClick={() => setDrawer(null)} />
-          <aside
-            className="cx-drawer open"
-            aria-label={drawer.id != null ? '編輯潛客' : '新增潛客'}
-          >
-            <div className="cx-dw-top">
-              <div className="cx-dw-bar">
-                <span className="crumb">
-                  <b>潛在客戶</b> ／ {drawer.id != null ? '編輯' : '新增'}
-                </span>
-                <span className="sp" />
-                <button className="cx-dw-iconbtn" onClick={() => setDrawer(null)} aria-label="關閉">
-                  <IconClose />
-                </button>
-              </div>
-              <div className="cx-emf-hero">
-                <h2>{drawer.id != null ? '編輯潛客' : '新增潛客'}</h2>
-              </div>
-            </div>
+        <FormDrawer
+          crumbRoot="潛在客戶"
+          noun="潛客"
+          isEdit={drawer.id != null}
+          onClose={() => setDrawer(null)}
+          onSave={saveDraft}
+        >
+          <label className="cx-emf-field span2">
+            <span className="l">姓名</span>
+            <input value={drawer.name} onChange={(e) => setField({ name: e.target.value })} />
+            {drawerTried && drawerErrors?.nameError && (
+              <span className="err">{drawerErrors.nameError}</span>
+            )}
+          </label>
 
-            <div className="cx-dw-body cx-emf-body">
-              <div className="cx-emf-grid">
-                <label className="cx-emf-field span2">
-                  <span className="l">姓名</span>
-                  <input value={drawer.name} onChange={(e) => setField({ name: e.target.value })} />
-                  {drawerTried && drawerErrors?.nameError && (
-                    <span className="err">{drawerErrors.nameError}</span>
-                  )}
-                </label>
+          <label className="cx-emf-field span2">
+            <span className="l">公司</span>
+            <input value={drawer.company} onChange={(e) => setField({ company: e.target.value })} />
+            {drawerTried && drawerErrors?.companyError && (
+              <span className="err">{drawerErrors.companyError}</span>
+            )}
+          </label>
 
-                <label className="cx-emf-field span2">
-                  <span className="l">公司</span>
+          <label className="cx-emf-field span2">
+            <span className="l">職稱</span>
+            <input
+              value={drawer.convertTitle}
+              onChange={(e) => setField({ convertTitle: e.target.value })}
+            />
+          </label>
+
+          <label className="cx-emf-field">
+            <span className="l">評分</span>
+            <select
+              value={drawer.score}
+              onChange={(e) => setField({ score: e.target.value as Score })}
+            >
+              {(Object.keys(SCORE_LABEL) as Score[]).map((s) => (
+                <option key={s} value={s}>
+                  {SCORE_LABEL[s]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="cx-emf-field">
+            <span className="l">狀態</span>
+            <select
+              value={drawer.status}
+              onChange={(e) => setField({ status: e.target.value as Status })}
+            >
+              {WORKING_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABEL[s]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="cx-emf-field">
+            <span className="l">來源</span>
+            <select value={drawer.source} onChange={(e) => setField({ source: e.target.value })}>
+              {SOURCE_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="cx-emf-field">
+            <span className="l">負責人</span>
+            <select
+              value={drawer.assignee}
+              onChange={(e) => setField({ assignee: e.target.value as OwnerId })}
+            >
+              {(Object.keys(OWNERS) as OwnerId[]).map((k) => (
+                <option key={k} value={k}>
+                  {OWNERS[k].name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="cx-emf-field span2">
+            <span className="l">聯絡方式</span>
+            <div className="cx-emf-toggle" style={{ gap: 18 }}>
+              {(['email', 'phone'] as ContactMethod[]).map((m) => (
+                <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <input
-                    value={drawer.company}
-                    onChange={(e) => setField({ company: e.target.value })}
+                    type="checkbox"
+                    checked={drawer.contacts.includes(m)}
+                    onChange={() =>
+                      setField({
+                        contacts: drawer.contacts.includes(m)
+                          ? drawer.contacts.filter((c) => c !== m)
+                          : [...drawer.contacts, m],
+                      })
+                    }
                   />
-                  {drawerTried && drawerErrors?.companyError && (
-                    <span className="err">{drawerErrors.companyError}</span>
-                  )}
+                  <span className="t">{m === 'email' ? 'Email' : '電話'}</span>
                 </label>
-
-                <label className="cx-emf-field span2">
-                  <span className="l">職稱</span>
-                  <input
-                    value={drawer.convertTitle}
-                    onChange={(e) => setField({ convertTitle: e.target.value })}
-                  />
-                </label>
-
-                <label className="cx-emf-field">
-                  <span className="l">評分</span>
-                  <select
-                    value={drawer.score}
-                    onChange={(e) => setField({ score: e.target.value as Score })}
-                  >
-                    {(Object.keys(SCORE_LABEL) as Score[]).map((s) => (
-                      <option key={s} value={s}>
-                        {SCORE_LABEL[s]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="cx-emf-field">
-                  <span className="l">狀態</span>
-                  <select
-                    value={drawer.status}
-                    onChange={(e) => setField({ status: e.target.value as Status })}
-                  >
-                    {WORKING_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {STATUS_LABEL[s]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="cx-emf-field">
-                  <span className="l">來源</span>
-                  <select
-                    value={drawer.source}
-                    onChange={(e) => setField({ source: e.target.value })}
-                  >
-                    {SOURCE_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="cx-emf-field">
-                  <span className="l">負責人</span>
-                  <select
-                    value={drawer.assignee}
-                    onChange={(e) => setField({ assignee: e.target.value as OwnerId })}
-                  >
-                    {(Object.keys(OWNERS) as OwnerId[]).map((k) => (
-                      <option key={k} value={k}>
-                        {OWNERS[k].name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <div className="cx-emf-field span2">
-                  <span className="l">聯絡方式</span>
-                  <div className="cx-emf-toggle" style={{ gap: 18 }}>
-                    {(['email', 'phone'] as ContactMethod[]).map((m) => (
-                      <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input
-                          type="checkbox"
-                          checked={drawer.contacts.includes(m)}
-                          onChange={() =>
-                            setField({
-                              contacts: drawer.contacts.includes(m)
-                                ? drawer.contacts.filter((c) => c !== m)
-                                : [...drawer.contacts, m],
-                            })
-                          }
-                        />
-                        <span className="t">{m === 'email' ? 'Email' : '電話'}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
-
-            <div className="cx-emf-foot">
-              <button className="cx-btn-outline" onClick={() => setDrawer(null)}>
-                取消
-              </button>
-              <button className="cx-btn-navy" onClick={saveDraft}>
-                儲存
-              </button>
-            </div>
-          </aside>
-        </>
+          </div>
+        </FormDrawer>
       )}
     </>
   );
