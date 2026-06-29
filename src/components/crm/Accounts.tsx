@@ -37,6 +37,7 @@ import {
   IconArrowRight,
   IconTrash,
   IconChevron,
+  IconDotsV,
 } from './icons';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -552,6 +553,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
   const [draft, setDraft] = useState<AccountDraft | null>(null);
   const [drawerTried, setDrawerTried] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [rowMenuId, setRowMenuId] = useState<number | null>(null);
   const drawerBodyRef = useRef<HTMLDivElement>(null);
 
   const filtered = filterAccounts(accounts, query);
@@ -614,16 +616,25 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
     if (target) showToast(`已刪除 ${target.name}`);
   }
 
+  // 列操作選單：點任意處關閉（觸發鈕已 stopPropagation，不會立即關回）
+  useEffect(() => {
+    if (rowMenuId == null) return;
+    const handler = () => setRowMenuId(null);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [rowMenuId]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (deleteId != null) setDeleteId(null);
+      if (rowMenuId != null) setRowMenuId(null);
+      else if (deleteId != null) setDeleteId(null);
       else if (draft) setDraft(null);
       else if (drawerId !== null) setDrawerId(null);
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [drawerId, draft, deleteId]);
+  }, [drawerId, draft, deleteId, rowMenuId]);
 
   return (
     <>
@@ -770,7 +781,7 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
               <th className="num">進行中商機</th>
               <th>負責業務</th>
               <th>健康度</th>
-              <th></th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -850,9 +861,61 @@ export default function Accounts({ showToast }: { showToast: (msg: string) => vo
                       {h.lbl}
                     </span>
                   </td>
-                  <td>
-                    <div className="cx-row-arrow">
-                      <IconArrowRight />
+                  <td className="cx-op-cell">
+                    <div className="cx-op-menu-wrap">
+                      <button
+                        className="cx-op-ic"
+                        aria-haspopup="menu"
+                        aria-expanded={rowMenuId === a.id}
+                        onClick={(e) => {
+                          e.stopPropagation(); // ← 別讓事件冒泡
+                          setRowMenuId((id) => (id === a.id ? null : a.id)); // ← 切換開/關
+                        }}
+                      >
+                        <IconDotsV />
+                      </button>
+                      <div
+                        className={`cx-quick-menu${rowMenuId === a.id ? ' open' : ''}`}
+                        role="menu"
+                      >
+                        <div
+                          className="cx-qm-item"
+                          role="menuitem"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRowMenuId(null);
+                            openEdit(a);
+                          }}
+                        >
+                          <span
+                            className="cx-qm-icon"
+                            style={{
+                              background: 'var(--cx-accent-soft)',
+                              color: 'var(--cx-accent)',
+                            }}
+                          >
+                            <IconEdit />
+                          </span>
+                          編輯
+                        </div>
+                        <div
+                          className="cx-qm-item"
+                          role="menuitem"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRowMenuId(null);
+                            setDeleteId(a.id);
+                          }}
+                        >
+                          <span
+                            className="cx-qm-icon"
+                            style={{ background: '#FEE2E2', color: '#dc2626' }}
+                          >
+                            <IconTrash />
+                          </span>
+                          刪除
+                        </div>
+                      </div>
                     </div>
                   </td>
                 </tr>

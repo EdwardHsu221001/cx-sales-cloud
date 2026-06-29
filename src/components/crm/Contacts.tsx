@@ -19,7 +19,7 @@ import ConfirmModal from './ConfirmModal';
 import SearchPill from './SearchPill';
 import FormDrawer from './FormDrawer';
 import { useRowSelection } from './useRowSelection';
-import { IconEdit, IconTrash } from './icons';
+import { IconEdit, IconTrash, IconDotsV } from './icons';
 
 // ── Static data ───────────────────────────────────────────────────────────────
 const CONTACTS: Contact[] = [
@@ -398,6 +398,7 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
   const [draft, setDraft] = useState<ContactDraft | null>(null);
   const [drawerTried, setDrawerTried] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [rowMenuId, setRowMenuId] = useState<number | null>(null);
   const drawerBodyRef = useRef<HTMLDivElement>(null);
 
   const filtered = filterContacts(contacts, query);
@@ -412,17 +413,25 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (deleteId != null) setDeleteId(null);
+      if (rowMenuId != null) setRowMenuId(null);
+      else if (deleteId != null) setDeleteId(null);
       else if (draft) setDraft(null);
       else closeDrawer();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [closeDrawer, deleteId, draft]);
+  }, [closeDrawer, deleteId, draft, rowMenuId]);
 
   useEffect(() => {
     if (drawerId !== null && drawerBodyRef.current) drawerBodyRef.current.scrollTop = 0;
   }, [drawerId]);
+
+  useEffect(() => {
+    if (rowMenuId == null) return;
+    const handler = () => setRowMenuId(null);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [rowMenuId]);
 
   const navContact = (dir: 1 | -1) => {
     if (drawerId === null || filtered.length === 0) return;
@@ -469,7 +478,6 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
   const contact = drawerId !== null ? (contacts.find((c) => c.id === drawerId) ?? null) : null;
   const co = contact ? CO[contact.co] : null;
   const own = contact ? OWNERS[contact.owner] : null;
-
   return (
     <>
       {/* ── Page header ── */}
@@ -601,6 +609,7 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
               <col style={{ width: 88 }} />
               <col style={{ width: 118 }} />
               <col style={{ width: 128 }} />
+              <col style={{ width: 60 }} />
             </colgroup>
             <thead>
               <tr>
@@ -621,12 +630,13 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
                 <th>聯絡</th>
                 <th>負責業務</th>
                 <th>最近互動</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="cx-empty-row">
+                  <td colSpan={8} className="cx-empty-row">
                     找不到符合『{query}』的聯絡人
                   </td>
                 </tr>
@@ -710,6 +720,63 @@ export default function Contacts({ showToast }: { showToast: (msg: string) => vo
                       <div className="cx-last-act">
                         {c.last}
                         <span className="ago">{c.ago}</span>
+                      </div>
+                    </td>
+                    <td className="cx-op-cell">
+                      <div className="cx-op-menu-wrap">
+                        <button
+                          className="cx-op-ic"
+                          aria-haspopup="menu"
+                          aria-expanded={rowMenuId === c.id}
+                          onClick={(e) => {
+                            e.stopPropagation(); // ← 別讓事件冒泡
+                            setRowMenuId((id) => (id === c.id ? null : c.id)); // ← 切換開/關
+                          }}
+                        >
+                          <IconDotsV />
+                        </button>
+                        <div
+                          className={`cx-quick-menu${rowMenuId === c.id ? ' open' : ''}`}
+                          role="menu"
+                        >
+                          <div
+                            className="cx-qm-item"
+                            role="menuitem"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRowMenuId(null);
+                              openEdit(c);
+                            }}
+                          >
+                            <span
+                              className="cx-qm-icon"
+                              style={{
+                                background: 'var(--cx-accent-soft)',
+                                color: 'var(--cx-accent)',
+                              }}
+                            >
+                              <IconEdit />
+                            </span>
+                            編輯
+                          </div>
+                          <div
+                            className="cx-qm-item"
+                            role="menuitem"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRowMenuId(null);
+                              setDeleteId(c.id);
+                            }}
+                          >
+                            <span
+                              className="cx-qm-icon"
+                              style={{ background: '#FEE2E2', color: '#dc2626' }}
+                            >
+                              <IconTrash />
+                            </span>
+                            刪除
+                          </div>
+                        </div>
                       </div>
                     </td>
                   </tr>

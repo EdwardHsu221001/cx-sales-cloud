@@ -1447,7 +1447,8 @@ table.cx-op-tbl {
   border: 1px solid var(--cx-border);
   border-radius: var(--cx-radius);
   box-shadow: var(--cx-shadow);
-  overflow: hidden;
+  /* 允許列內 kebab 下拉溢出卡片邊界，避免被裁切 */
+  overflow: visible;
 }
 table.cx-acc-tbl {
   width: 100%;
@@ -1474,6 +1475,9 @@ table.cx-acc-tbl {
   font-size: 13px;
   vertical-align: middle;
   overflow: hidden;
+}
+.cx-acc-tbl tbody td.cx-op-cell {
+  overflow: visible;
 }
 .cx-acc-tbl tbody tr:last-child td {
   border-bottom: none;
@@ -4090,7 +4094,7 @@ table.cx-lb-tbl {
   border: 1px solid var(--cx-border);
   border-radius: var(--cx-radius);
   box-shadow: var(--cx-shadow);
-  overflow: hidden;
+  overflow: visible;
 }
 table.cx-ct-tbl {
   width: 100%;
@@ -4114,6 +4118,9 @@ table.cx-ct-tbl {
   font-size: 13px;
   vertical-align: middle;
   overflow: hidden;
+}
+.cx-ct-tbl tbody td.cx-op-cell {
+  overflow: visible;
 }
 .cx-ct-tbl tbody tr:last-child td {
   border-bottom: none;
