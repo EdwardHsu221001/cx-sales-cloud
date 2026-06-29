@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import Reports from '@/components/crm/Reports';
+import Reports from '@/components/crm/reports/Reports';
 
 function IconCheck() {
   return (

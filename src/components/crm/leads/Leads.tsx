@@ -18,10 +18,10 @@ import {
   type ContactMethod,
   type OwnerId,
 } from './leads.utils';
-import ConfirmModal from './ConfirmModal';
-import SearchPill from './SearchPill';
-import FormDrawer from './FormDrawer';
-import { useRowSelection } from './useRowSelection';
+import ConfirmModal from '../common/ConfirmModal';
+import SearchPill from '../common/SearchPill';
+import FormDrawer from '../common/FormDrawer';
+import { useRowSelection } from '../common/useRowSelection';
 import {
   IconDownload,
   IconPlus,
@@ -44,7 +44,7 @@ import {
   IconTrendUp,
   IconArrowDown,
   IconChevron,
-} from './icons';
+} from '../common/icons';
 
 // ─── Static data ────────────────────────────────────────────────────────────
 const LEADS: Lead[] = [

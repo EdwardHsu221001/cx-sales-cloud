@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import Settings from '@/components/crm/Settings';
+import Settings from '@/components/crm/settings/Settings';
 
 function IconCheck() {
   return (

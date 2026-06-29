@@ -1,4 +1,4 @@
-import { OWNERS, type OwnerId } from './owners';
+import { OWNERS, type OwnerId } from '../common/owners';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 export type HealthKey = 'good' | 'stable' | 'watch' | 'risk';
@@ -87,7 +87,7 @@ export function filterAccounts(accounts: Account[], query: string): Account[] {
   const q = query.trim().toLowerCase();
   if (q === '') return [...accounts];
   return accounts.filter(
-    (a) => a.name.toLowerCase().includes(q) || a.domain.toLowerCase().includes(q),
+    (a) => a.name.toLowerCase().includes(q) || a.domain.toLowerCase().includes(q)
   );
 }
 
@@ -112,7 +112,7 @@ function deriveSizeShort(size: string): string {
 export function materializeAccount(
   draft: AccountDraft,
   newId: number,
-  existing?: Account,
+  existing?: Account
 ): Account {
   return {
     id: existing?.id ?? draft.id ?? newId,

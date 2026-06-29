@@ -16,10 +16,10 @@ import {
   type HealthKey,
   type OwnerId,
 } from './accounts.utils';
-import ConfirmModal from './ConfirmModal';
-import SearchPill from './SearchPill';
-import FormDrawer from './FormDrawer';
-import { useRowSelection } from './useRowSelection';
+import ConfirmModal from '../common/ConfirmModal';
+import SearchPill from '../common/SearchPill';
+import FormDrawer from '../common/FormDrawer';
+import { useRowSelection } from '../common/useRowSelection';
 import {
   IconExport,
   IconPlus,
@@ -38,7 +38,7 @@ import {
   IconTrash,
   IconChevron,
   IconDotsV,
-} from './icons';
+} from '../common/icons';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabId = 'overview' | 'contacts' | 'opps' | 'activity';

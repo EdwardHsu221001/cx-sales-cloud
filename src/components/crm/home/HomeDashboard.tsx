@@ -14,7 +14,7 @@ import {
   IconClock,
   IconCheck,
   IconEmail,
-} from './icons';
+} from '../common/icons';
 
 // ─── Static data ─────────────────────────────────────────────────────────────
 const FUNNEL_STAGES = [

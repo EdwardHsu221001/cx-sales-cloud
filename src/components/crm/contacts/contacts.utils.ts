@@ -1,4 +1,4 @@
-import { OWNERS, type OwnerId } from './owners';
+import { OWNERS, type OwnerId } from '../common/owners';
 
 // 由 owners.ts 集中維護，re-export 以維持既有匯入點。
 export { OWNERS, type OwnerId };
@@ -61,11 +61,31 @@ export interface ContactValidation {
 /** 固定公司對照（名稱／標誌／漸層／產業）。 */
 export const CO: Record<CoId, { nm: string; logo: string; g: string; ind: string }> = {
   tsmc: { nm: '台積電', logo: '台', g: 'linear-gradient(135deg,#2563eb,#1e3a5f)', ind: '半導體' },
-  fox: { nm: '鴻海精密', logo: '鴻', g: 'linear-gradient(135deg,#1e3a5f,#122440)', ind: '電子製造' },
+  fox: {
+    nm: '鴻海精密',
+    logo: '鴻',
+    g: 'linear-gradient(135deg,#1e3a5f,#122440)',
+    ind: '電子製造',
+  },
   mtk: { nm: '聯發科技', logo: '聯', g: 'linear-gradient(135deg,#7c3aed,#5b21b6)', ind: 'IC 設計' },
-  wis: { nm: '緯創資通', logo: '緯', g: 'linear-gradient(135deg,#0ea5e9,#0369a1)', ind: '電子製造' },
-  delta: { nm: '台達電子', logo: '台', g: 'linear-gradient(135deg,#dc2626,#991b1b)', ind: '電源管理' },
-  asus: { nm: '華碩電腦', logo: '華', g: 'linear-gradient(135deg,#0891b2,#0e7490)', ind: '消費電子' },
+  wis: {
+    nm: '緯創資通',
+    logo: '緯',
+    g: 'linear-gradient(135deg,#0ea5e9,#0369a1)',
+    ind: '電子製造',
+  },
+  delta: {
+    nm: '台達電子',
+    logo: '台',
+    g: 'linear-gradient(135deg,#dc2626,#991b1b)',
+    ind: '電源管理',
+  },
+  asus: {
+    nm: '華碩電腦',
+    logo: '華',
+    g: 'linear-gradient(135deg,#0891b2,#0e7490)',
+    ind: '消費電子',
+  },
 };
 
 /** 角色（職務）可選清單。 */
@@ -83,7 +103,7 @@ export function filterContacts(contacts: Contact[], query: string): Contact[] {
     (c) =>
       c.nm.toLowerCase().includes(q) ||
       CO[c.co].nm.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q),
+      c.email.toLowerCase().includes(q)
   );
 }
 
@@ -103,7 +123,7 @@ export function validateContactDraft(draft: ContactDraft): ContactValidation {
 export function materializeContact(
   draft: ContactDraft,
   newId: number,
-  existing?: Contact,
+  existing?: Contact
 ): Contact {
   return {
     id: existing?.id ?? draft.id ?? newId,

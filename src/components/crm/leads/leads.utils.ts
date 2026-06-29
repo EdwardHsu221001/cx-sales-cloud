@@ -1,4 +1,4 @@
-import { OWNERS, type OwnerId } from './owners';
+import { OWNERS, type OwnerId } from '../common/owners';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 export type Score = 'hot' | 'warm' | 'cold';
@@ -53,7 +53,7 @@ export function filterLeads(leads: Lead[], query: string): Lead[] {
   const q = query.trim().toLowerCase();
   if (q === '') return [...leads];
   return leads.filter(
-    (lead) => lead.name.toLowerCase().includes(q) || lead.company.toLowerCase().includes(q),
+    (lead) => lead.name.toLowerCase().includes(q) || lead.company.toLowerCase().includes(q)
   );
 }
 
@@ -110,6 +110,6 @@ export function deleteLead(leads: Lead[], id: number): Lead[] {
 /** 轉換：把指定 id 的潛客標記為已轉化並鎖定，回傳新陣列。 */
 export function convertLead(leads: Lead[], id: number): Lead[] {
   return leads.map((lead) =>
-    lead.id === id ? { ...lead, status: 'converted', canConvert: false } : lead,
+    lead.id === id ? { ...lead, status: 'converted', canConvert: false } : lead
   );
 }

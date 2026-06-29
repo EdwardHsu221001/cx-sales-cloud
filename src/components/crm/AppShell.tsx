@@ -15,7 +15,7 @@ import {
   IconChevron,
   IconHelp,
   IconBell,
-} from './icons';
+} from './common/icons';
 
 const NAV_ITEMS = [
   { href: '/', label: '首頁', Icon: IconHome },

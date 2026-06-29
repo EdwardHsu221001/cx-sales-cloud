@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, Fragment } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { IconSearch } from './icons';
+import { IconSearch } from '../common/icons';
 import {
   splitMergeText,
   filterEmailTemplates,
@@ -4313,16 +4313,12 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
     [batchOn]
   );
   const togglePlSection = useCallback((si: number) => {
-    setPlSections((prev) =>
-      prev.map((s, i) => (i === si ? { ...s, collapsed: !s.collapsed } : s))
-    );
+    setPlSections((prev) => prev.map((s, i) => (i === si ? { ...s, collapsed: !s.collapsed } : s)));
   }, []);
   const removePlField = useCallback(
     (si: number, fi: number) => {
       setPlSections((prev) =>
-        prev.map((s, i) =>
-          i === si ? { ...s, fields: s.fields.filter((_, j) => j !== fi) } : s
-        )
+        prev.map((s, i) => (i === si ? { ...s, fields: s.fields.filter((_, j) => j !== fi) } : s))
       );
       showToast('已移除欄位');
     },
@@ -5701,7 +5697,12 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
                             <div className="ft">{f.t}</div>
                           </div>
                           <button className="fx" title="移除" onClick={() => removePlField(si, fi)}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
                               <path d="M18 6 6 18M6 6l12 12" />
                             </svg>
                           </button>
@@ -6196,7 +6197,11 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
                       {draft.body.map((b, i) => {
                         if (b.kind === 'greet' || b.kind === 'p' || b.kind === 'cta') {
                           const label =
-                            b.kind === 'greet' ? '問候' : b.kind === 'cta' ? '行動按鈕文字' : '段落';
+                            b.kind === 'greet'
+                              ? '問候'
+                              : b.kind === 'cta'
+                                ? '行動按鈕文字'
+                                : '段落';
                           return (
                             <label className="cx-emf-block" key={i}>
                               <span className="l">{label}</span>

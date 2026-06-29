@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import Contacts from '@/components/crm/Contacts';
+import Contacts from '@/components/crm/contacts/Contacts';
 
 function IconCheck() {
   return (

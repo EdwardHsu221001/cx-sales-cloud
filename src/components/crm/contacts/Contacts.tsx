@@ -15,11 +15,11 @@ import {
   type CoId,
   type OwnerId,
 } from './contacts.utils';
-import ConfirmModal from './ConfirmModal';
-import SearchPill from './SearchPill';
-import FormDrawer from './FormDrawer';
-import { useRowSelection } from './useRowSelection';
-import { IconEdit, IconTrash, IconDotsV } from './icons';
+import ConfirmModal from '../common/ConfirmModal';
+import SearchPill from '../common/SearchPill';
+import FormDrawer from '../common/FormDrawer';
+import { useRowSelection } from '../common/useRowSelection';
+import { IconEdit, IconTrash, IconDotsV } from '../common/icons';
 
 // ── Static data ───────────────────────────────────────────────────────────────
 const CONTACTS: Contact[] = [
