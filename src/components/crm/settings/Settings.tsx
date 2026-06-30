@@ -22,199 +22,32 @@ import {
   type PLSection,
   type PLRelCard,
 } from './pagelayout.utils';
-
-// ── Icons ─────────────────────────────────────────────────────────────────────
-function ChevRight() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m9 6 6 6-6 6" />
-    </svg>
-  );
-}
-function ChevLeft() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-function XIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  );
-}
-function PlusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
-function EditIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  );
-}
-function SaveIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
-      <path d="M17 21v-8H7v8M7 3v5h8" />
-    </svg>
-  );
-}
-function ResetIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
-      <path d="M3 3v5h5" />
-    </svg>
-  );
-}
-function ExportIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 15V3M7 8l5-5 5 5" />
-      <path d="M5 21h14" />
-    </svg>
-  );
-}
-function InfoIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 16v-4M12 8h.01" />
-    </svg>
-  );
-}
-function ClipIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-      <rect x="8" y="2" width="8" height="4" rx="1" />
-    </svg>
-  );
-}
-function LockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="11" width="18" height="11" rx="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-function LoginIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-      <path d="m10 17 5-5-5-5M15 12H3" />
-    </svg>
-  );
-}
-function UserGrpIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="9" cy="8" r="3.2" />
-      <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
-      <path d="M16 5.5a3.2 3.2 0 0 1 0 6" />
-      <path d="M17.5 14.5a5.5 5.5 0 0 1 3 5" />
-    </svg>
-  );
-}
-function CheckCircle() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M22 11.1V12a10 10 0 1 1-5.9-9.1" />
-      <path d="M22 4 12 14.1l-3-3" />
-    </svg>
-  );
-}
-function LicIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M3 10h18" />
-    </svg>
-  );
-}
-function ClockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 7v5l3 2" />
-    </svg>
-  );
-}
-function IconSettingsCenter() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2v3M12 19v3M5 5l2 2M17 17l2 2M2 12h3M19 12h3M5 19l2-2M17 7l2-2" />
-    </svg>
-  );
-}
-function IconGroupUsers() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <circle cx="9" cy="8" r="3.2" />
-      <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
-      <path d="M16 5.5a3.2 3.2 0 0 1 0 6" />
-      <path d="M17.5 14.5a5.5 5.5 0 0 1 3 5" />
-    </svg>
-  );
-}
-function IconGroupObjects() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <ellipse cx="12" cy="5" rx="8" ry="3" />
-      <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
-      <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
-    </svg>
-  );
-}
-function IconGroupUI() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M3 9h18M9 21V9" />
-    </svg>
-  );
-}
-function IconGroupAuto() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z" />
-    </svg>
-  );
-}
-function IconGroupIntegration() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M9 2v6M15 2v6M7 8h10v3a5 5 0 0 1-10 0Z" />
-      <path d="M12 16v6" />
-    </svg>
-  );
-}
-function MonitorIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 3v18h18" />
-      <path d="m7 14 3-3 3 3 5-6" />
-    </svg>
-  );
-}
+import {
+  ChevRight,
+  ChevLeft,
+  CheckIcon,
+  XIcon,
+  PlusIcon,
+  EditIcon,
+  ExportIcon,
+  InfoIcon,
+  ClipIcon,
+  LockIcon,
+  LoginIcon,
+  UserGrpIcon,
+  CheckCircle,
+  LicIcon,
+  ClockIcon,
+  IconSettingsCenter,
+  IconGroupUsers,
+  IconGroupObjects,
+  IconGroupUI,
+  IconGroupAuto,
+  IconGroupIntegration,
+  MonitorIcon,
+} from './settings.icons';
+import { ROLES, USERS } from './settings.data';
+import DiscountPanel from './discount/DiscountPanel';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const GRAD: Record<string, string> = {
@@ -228,141 +61,11 @@ const GRAD: Record<string, string> = {
   teal: 'linear-gradient(135deg,#2dd4bf,#0d9488)',
 };
 
-type RoleKey = 'admin' | 'director' | 'manager' | 'senior' | 'rep' | 'support';
-const ROLES: Record<RoleKey, { name: string; color: string; cap: number; over: string }> = {
-  admin: { name: '系統管理員', color: '#2563eb', cap: 100, over: 'unlimited' },
-  director: { name: '區域總監', color: '#6d28d9', cap: 40, over: 'approve' },
-  manager: { name: '業務經理', color: '#0891b2', cap: 25, over: 'approve' },
-  senior: { name: '資深業務', color: '#059669', cap: 15, over: 'approve' },
-  rep: { name: '業務代表', color: '#ea7a1e', cap: 10, over: 'approve' },
-  support: { name: '業務支援', color: '#9aa1ae', cap: 0, over: 'block' },
-};
-
 const STATUS_MAP = {
   active: { cls: 'active', lbl: '啟用中' },
   inactive: { cls: 'inactive', lbl: '停用' },
   pending: { cls: 'pending', lbl: '待啟用' },
 };
-
-interface UserData {
-  av: string;
-  g: string;
-  name: string;
-  email: string;
-  title: string;
-  role: RoleKey;
-  profile: string;
-  perms: string[];
-  status: 'active' | 'inactive' | 'pending';
-  last: string;
-  since: string;
-}
-const USERS: UserData[] = [
-  {
-    av: '陳',
-    g: 'green',
-    name: '陳小明',
-    email: 'chen.xm@cxcrm.com',
-    title: '資深業務經理',
-    role: 'manager',
-    profile: '業務經理',
-    perms: ['報表匯出', '商機刪除'],
-    status: 'active',
-    last: '2 小時前',
-    since: '2023/11/04',
-  },
-  {
-    av: '王',
-    g: 'navy',
-    name: '王淑芬',
-    email: 'wang.sf@cxcrm.com',
-    title: 'IT 系統管理員',
-    role: 'admin',
-    profile: '系統管理員',
-    perms: ['報表匯出', '商機刪除', 'API 存取', '大量匯入精靈', 'Cisco 整合'],
-    status: 'active',
-    last: '剛剛',
-    since: '2022/08/15',
-  },
-  {
-    av: '李',
-    g: 'cyan',
-    name: '李孟翰',
-    email: 'lee.mh@cxcrm.com',
-    title: '北區區域總監',
-    role: 'director',
-    profile: '業務經理',
-    perms: ['報表匯出', 'API 存取'],
-    status: 'active',
-    last: '1 天前',
-    since: '2023/02/20',
-  },
-  {
-    av: '陳',
-    g: 'violet',
-    name: '陳美華',
-    email: 'chen.mh@cxcrm.com',
-    title: '資深業務',
-    role: 'senior',
-    profile: '標準業務',
-    perms: ['報表匯出', '大量匯入精靈'],
-    status: 'active',
-    last: '3 小時前',
-    since: '2023/06/11',
-  },
-  {
-    av: '張',
-    g: 'blue',
-    name: '張志豪',
-    email: 'chang.zh@cxcrm.com',
-    title: '業務代表',
-    role: 'rep',
-    profile: '標準業務',
-    perms: ['報表匯出'],
-    status: 'active',
-    last: '昨天',
-    since: '2024/03/01',
-  },
-  {
-    av: '林',
-    g: 'amber',
-    name: '林俊傑',
-    email: 'lin.cj@cxcrm.com',
-    title: '業務代表',
-    role: 'rep',
-    profile: '標準業務',
-    perms: [],
-    status: 'active',
-    last: '5 天前',
-    since: '2024/09/18',
-  },
-  {
-    av: '吳',
-    g: 'teal',
-    name: '吳建宏',
-    email: 'wu.jh@cxcrm.com',
-    title: '資深業務',
-    role: 'senior',
-    profile: '標準業務',
-    perms: ['Cisco 整合'],
-    status: 'pending',
-    last: '—',
-    since: '2026/06/14',
-  },
-  {
-    av: '黃',
-    g: 'rose',
-    name: '黃詩涵',
-    email: 'huang.sh@cxcrm.com',
-    title: '業務支援專員',
-    role: 'support',
-    profile: '業務支援',
-    perms: [],
-    status: 'inactive',
-    last: '30 天前',
-    since: '2023/01/09',
-  },
-];
 
 const OBJECTS = [
   { nm: '客戶帳號', api: 'Account' },
@@ -4223,9 +3926,6 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
   const [hubSearch, setHubSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-  const [discountVals, setDiscountVals] = useState<Record<string, number>>(() =>
-    Object.fromEntries(Object.entries(ROLES).map(([k, r]) => [k, r.cap]))
-  );
   const [drawer, setDrawer] = useState<DrawerState>({
     open: false,
     type: 'user',
@@ -4774,133 +4474,6 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
   }
 
   // ── Discount Caps panel ───────────────────────────────────────────────────
-  function DiscountPanel() {
-    return (
-      <div>
-        <div className="cx-crumbs">
-          <a onClick={() => setActiveTab('hub')}>設定</a>
-          <ChevRight />
-          <span>使用者管理</span>
-          <ChevRight />
-          <span>角色折扣上限</span>
-        </div>
-        <div className="cx-set-head">
-          <div>
-            <h1>角色折扣上限</h1>
-            <div className="sub">
-              設定各角色於商機 / 報價單可核給的最高折扣百分比。超過上限的報價將自動觸發審核流程。
-            </div>
-          </div>
-          <div className="actions">
-            <button
-              className="cx-btn-outline"
-              onClick={() => {
-                setDiscountVals(
-                  Object.fromEntries(Object.entries(ROLES).map(([k, r]) => [k, r.cap]))
-                );
-                showToast('已還原為預設值');
-              }}
-            >
-              <ResetIcon />
-              還原
-            </button>
-            <button className="cx-btn-navy" onClick={() => showToast('已儲存角色折扣上限')}>
-              <SaveIcon />
-              儲存變更
-            </button>
-          </div>
-        </div>
-
-        <div className="cx-disc-note">
-          <InfoIcon />
-          <div>
-            折扣上限與「業務自動化 ›
-            審核流程」連動：當業務於報價輸入的折扣超過其角色上限，系統將自動送出審核給上一層主管。系統管理員不受上限限制。
-          </div>
-        </div>
-
-        <div className="cx-data-card">
-          <table className="cx-dt">
-            <colgroup>
-              <col />
-              <col style={{ width: 90 }} />
-              <col style={{ width: 300 }} />
-              <col style={{ width: 150 }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>角色</th>
-                <th className="num">人數</th>
-                <th>折扣上限</th>
-                <th>超限行為</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(Object.entries(ROLES) as [RoleKey, (typeof ROLES)[RoleKey]][]).map(([k, r]) => {
-                const cnt = USERS.filter((u) => u.role === k).length;
-                const val = discountVals[k] ?? r.cap;
-                const overBadge =
-                  r.over === 'unlimited' ? (
-                    <span className="cx-status active">
-                      <span className="pip" />
-                      不受限制
-                    </span>
-                  ) : r.over === 'block' ? (
-                    <span className="cx-status inactive">
-                      <span className="pip" />
-                      禁止核給
-                    </span>
-                  ) : (
-                    <span className="cx-status pending">
-                      <span className="pip" />
-                      自動送審核
-                    </span>
-                  );
-                return (
-                  <tr key={k} className="no-hover">
-                    <td>
-                      <span className="cx-role-tag">
-                        <span className="rk" style={{ background: r.color }} />
-                        {r.name}
-                      </span>
-                    </td>
-                    <td className="num" style={{ color: 'var(--cx-text-sub)' }}>
-                      {cnt}
-                    </td>
-                    <td>
-                      <div className="cx-disc-cap">
-                        <div className="track">
-                          <i style={{ width: `${val}%` }} />
-                        </div>
-                        <div className="cx-disc-input">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={val}
-                            disabled={r.over === 'unlimited'}
-                            onChange={(e) =>
-                              setDiscountVals((prev) => ({
-                                ...prev,
-                                [k]: Math.max(0, Math.min(100, +e.target.value || 0)),
-                              }))
-                            }
-                          />
-                          <span className="pct">%</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{overBadge}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
   // ── Roles panel ───────────────────────────────────────────────────────────
   function RolesPanel() {
     const [rpeople, setRpeople] = useState<RPerson[]>(RPEOPLE_INIT);
@@ -8128,7 +7701,9 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
             {activeTab === 'roles' && <RolesPanel />}
             {activeTab === 'profiles' && <ProfilesPanel />}
             {activeTab === 'permsets' && <PermSetsPanel />}
-            {activeTab === 'discount' && <DiscountPanel />}
+            {activeTab === 'discount' && (
+              <DiscountPanel showToast={showToast} onNavigate={setActiveTab} />
+            )}
             {activeTab === 'objects' && <ObjectsPanel />}
             {activeTab === 'fields' && <FieldsPanel />}
             {activeTab === 'flow' && <FlowPanel />}
