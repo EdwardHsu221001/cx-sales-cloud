@@ -3548,11 +3548,11 @@ function DetailDrawer({
     <>
       <div className="cx-drawer-scrim open" onClick={onClose} />
       <aside className="cx-drawer open">
-        {state.type === 'user' && <UserContent />}
-        {state.type === 'profile' && <ProfileContent />}
-        {state.type === 'permset' && <PermSetContent />}
-        {state.type === 'flow' && <FlowContent />}
-        {state.type === 'batch' && <BatchContent />}
+        {state.type === 'user' && UserContent()}
+        {state.type === 'profile' && ProfileContent()}
+        {state.type === 'permset' && PermSetContent()}
+        {state.type === 'flow' && FlowContent()}
+        {state.type === 'batch' && BatchContent()}
       </aside>
     </>
   );
