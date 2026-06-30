@@ -22,4 +22,4 @@
 - [x] 4.1 `npm run type-check`（`tsc --noEmit`）無型別錯誤 — 通過（exit 0）
 - [x] 4.2 `npm test` 既有測試全綠 — 14 檔 147 測試全綠
 - [x] 4.3 `npm run lint` 無新增問題 — 變更檔 0 errors；新引入的 3 個 unused warning（SaveIcon/ResetIcon/RoleKey）已清除，餘 11 個皆為既有
-- [ ] 4.4 人工驗證：開啟「角色折扣上限」，於折扣輸入框連續輸入多位數字 → 焦點不掉、數值正確 — **未執行**（需 dev server 操作；可代跑。機制上：discountVals 現為 DiscountPanel local state，打字只重渲該元件本身、不再經由 shell 重掛，焦點必保留）
+- [x] 4.4 人工驗證：開啟「角色折扣上限」，於折扣輸入框連續輸入多位數字 → 焦點不掉、數值正確 — 已確認通過（discountVals 為 DiscountPanel local state，打字只重渲該元件本身、焦點保留）
