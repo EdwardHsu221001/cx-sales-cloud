@@ -1,22 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-type Stage = 'need' | 'proposal' | 'negotiate' | 'won' | 'lost';
-type OwnerId = 'zhang' | 'chen' | 'lin';
-type CoId = 'tsmc' | 'fox' | 'mtk' | 'wis' | 'delta' | 'asus';
-
-interface Opp {
-  id: number;
-  title: string;
-  co: CoId;
-  amt: number;
-  prob: number;
-  close: string;
-  owner: OwnerId;
-  stage: Stage;
-}
+import type { Stage, OwnerId, CoId, Opp } from './opportunities.utils';
+import { INIT_OPPS } from './opportunities.data';
 
 // ── Static data ───────────────────────────────────────────────────────────────
 const ASSIGNEES: Record<OwnerId, { nm: string; av: string; g: string }> = {
@@ -46,129 +32,6 @@ const STAGE_MAP = Object.fromEntries(STAGES.map((s) => [s.key, s])) as Record<
   Stage,
   (typeof STAGES)[0]
 >;
-
-const INIT_OPPS: Opp[] = [
-  {
-    id: 1,
-    title: '2026 智慧製造平台導入',
-    co: 'tsmc',
-    amt: 2400,
-    prob: 65,
-    close: '2026/07/30',
-    owner: 'zhang',
-    stage: 'negotiate',
-  },
-  {
-    id: 2,
-    title: '雲端研發環境建置',
-    co: 'mtk',
-    amt: 1800,
-    prob: 60,
-    close: '2026/07/18',
-    owner: 'chen',
-    stage: 'negotiate',
-  },
-  {
-    id: 3,
-    title: '資安監控系統擴充',
-    co: 'tsmc',
-    amt: 1200,
-    prob: 45,
-    close: '2026/08/15',
-    owner: 'zhang',
-    stage: 'proposal',
-  },
-  {
-    id: 4,
-    title: '供應鏈管理系統升級',
-    co: 'fox',
-    amt: 2000,
-    prob: 40,
-    close: '2026/08/05',
-    owner: 'lin',
-    stage: 'proposal',
-  },
-  {
-    id: 5,
-    title: '能源管理儀表板專案',
-    co: 'delta',
-    amt: 900,
-    prob: 50,
-    close: '2026/08/12',
-    owner: 'chen',
-    stage: 'proposal',
-  },
-  {
-    id: 6,
-    title: '資料分析平台導入',
-    co: 'mtk',
-    amt: 1000,
-    prob: 35,
-    close: '2026/08/28',
-    owner: 'chen',
-    stage: 'proposal',
-  },
-  {
-    id: 7,
-    title: '年度技術支援續約',
-    co: 'tsmc',
-    amt: 600,
-    prob: 25,
-    close: '2026/09/10',
-    owner: 'zhang',
-    stage: 'need',
-  },
-  {
-    id: 8,
-    title: '倉儲自動化整合案',
-    co: 'fox',
-    amt: 1100,
-    prob: 20,
-    close: '2026/09/22',
-    owner: 'lin',
-    stage: 'need',
-  },
-  {
-    id: 9,
-    title: 'IoT 設備監控擴充',
-    co: 'delta',
-    amt: 500,
-    prob: 15,
-    close: '2026/09/30',
-    owner: 'chen',
-    stage: 'need',
-  },
-  {
-    id: 10,
-    title: '緯創資通 — 新商機',
-    co: 'wis',
-    amt: 900,
-    prob: 10,
-    close: '2026/07/15',
-    owner: 'zhang',
-    stage: 'need',
-  },
-  {
-    id: 11,
-    title: '全球客服系統整合',
-    co: 'asus',
-    amt: 1500,
-    prob: 100,
-    close: '2026/06/01',
-    owner: 'zhang',
-    stage: 'won',
-  },
-  {
-    id: 12,
-    title: '舊機房維運轉案',
-    co: 'fox',
-    amt: 700,
-    prob: 0,
-    close: '2026/05/20',
-    owner: 'lin',
-    stage: 'lost',
-  },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtM(k: number): string {

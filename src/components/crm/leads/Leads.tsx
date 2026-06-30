@@ -18,6 +18,7 @@ import {
   type ContactMethod,
   type OwnerId,
 } from './leads.utils';
+import { LEADS } from './leads.data';
 import ConfirmModal from '../common/ConfirmModal';
 import SearchPill from '../common/SearchPill';
 import FormDrawer from '../common/FormDrawer';
@@ -47,95 +48,6 @@ import {
 } from '../common/icons';
 
 // ─── Static data ────────────────────────────────────────────────────────────
-const LEADS: Lead[] = [
-  {
-    id: 1,
-    name: '陳雅婷',
-    initial: '陳',
-    company: '緯創資通',
-    contacts: ['email', 'phone'],
-    score: 'hot',
-    status: 'followed',
-    source: '展覽活動',
-    assigneeBg: 'linear-gradient(135deg,#60a5fa,#2563eb)',
-    assigneeInitial: '張',
-    assigneeName: '張志豪',
-    canConvert: true,
-    convertTitle: '採購經理',
-  },
-  {
-    id: 2,
-    name: '林志明',
-    initial: '林',
-    company: '研華科技',
-    contacts: ['email', 'phone'],
-    score: 'hot',
-    status: 'toconvert',
-    source: '業務介紹',
-    assigneeBg: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
-    assigneeInitial: '林',
-    assigneeName: '林俊傑',
-    canConvert: true,
-    convertTitle: '資訊部協理',
-  },
-  {
-    id: 3,
-    name: '黃柏翰',
-    initial: '黃',
-    company: '台達電子',
-    contacts: ['email'],
-    score: 'warm',
-    status: 'contacted',
-    source: '官網表單',
-    assigneeBg: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
-    assigneeInitial: '陳',
-    assigneeName: '陳美華',
-    canConvert: false,
-  },
-  {
-    id: 4,
-    name: '王俊凱',
-    initial: '王',
-    company: '聯發科技',
-    contacts: ['email', 'phone'],
-    score: 'warm',
-    status: 'overdue',
-    source: '廣告投放',
-    assigneeBg: 'linear-gradient(135deg,#60a5fa,#2563eb)',
-    assigneeInitial: '張',
-    assigneeName: '張志豪',
-    canConvert: false,
-  },
-  {
-    id: 5,
-    name: '吳雅文',
-    initial: '吳',
-    company: '英業達',
-    contacts: ['email'],
-    score: 'cold',
-    status: 'new',
-    source: '官網表單',
-    assigneeBg: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
-    assigneeInitial: '陳',
-    assigneeName: '陳美華',
-    canConvert: false,
-  },
-  {
-    id: 6,
-    name: '蔡宗翰',
-    initial: '蔡',
-    company: '仁寶電腦',
-    contacts: ['email', 'phone'],
-    score: 'cold',
-    status: 'new',
-    source: '展覽活動',
-    assigneeBg: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
-    assigneeInitial: '林',
-    assigneeName: '林俊傑',
-    canConvert: false,
-  },
-];
-
 const STATUS_LABEL: Record<Status, string> = {
   new: '新進名單',
   contacted: '已聯繫',
