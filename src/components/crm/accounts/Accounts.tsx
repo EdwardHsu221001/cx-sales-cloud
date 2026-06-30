@@ -35,7 +35,6 @@ import {
   IconPin,
   IconList,
   IconGrid,
-  IconArrowRight,
   IconTrash,
   IconChevron,
   IconDotsV,
