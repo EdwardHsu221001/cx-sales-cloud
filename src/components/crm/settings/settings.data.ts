@@ -15,6 +15,9 @@ import type {
   ImpRecEntry,
 } from './settings.types';
 
+import type { EmailCategory, EmailSig, EmailTemplate, EmailMergeGroup } from './email.utils';
+import type { PLPaletteTab, PLPaletteGroup, PLSection, PLRelCard } from './pagelayout.utils';
+
 // 頭像漸層底色（依 g 色鍵）。
 export const GRAD: Record<string, string> = {
   green: 'linear-gradient(135deg,#34D399,#10b981)',
@@ -813,3 +816,490 @@ export const IMP_RECORDS: Record<number | 'default', ImpRecEntry[]> = {
     { id: 'OPP-0844', name: '凱基系統-網路設備採購', status: 'ok' },
   ],
 };
+
+export const EMAIL_CATS: Record<string, EmailCategory> = {
+  sales: { nm: '業務 / 商機', hex: '#3B82F6', v: 'blue' },
+  cs: { nm: '客戶成功', hex: '#059669', v: 'green' },
+  service: { nm: '服務支援', hex: '#0369a1', v: 'cyan' },
+  mkt: { nm: '行銷活動', hex: '#be185d', v: 'pink' },
+  sys: { nm: '系統通知', hex: '#6d28d9', v: 'violet' },
+};
+
+export const EMAIL_SENT_30D = '3,480';
+
+export const SIG: EmailSig = {
+  name: '{{User.Name}}',
+  title: '{{User.Title}}｜CX CRM',
+  phone: '{{User.Phone}}',
+};
+
+export const EMAIL_TEMPLATES_INIT: EmailTemplate[] = [
+  {
+    k: 'quote_send',
+    name: '報價單寄送',
+    cat: 'sales',
+    icon: 'send',
+    on: true,
+    used: '2 天前',
+    from: '業務負責人 <{{User.Email}}>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '您的報價單 {{Opportunity.Name}} 已備妥',
+    body: [
+      { kind: 'greet', text: '親愛的 {{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '感謝您對本公司方案的關注。針對 {{Account.Name}} 的需求，我們已為您備妥報價，明細如下：',
+      },
+      {
+        kind: 'quote',
+        rows: [
+          ['方案', '{{Quote.Name}}'],
+          ['有效期限', '{{Quote.ExpirationDate}}'],
+        ],
+        total: ['報價總額', '{{Quote.TotalAmount}}'],
+      },
+      {
+        kind: 'p',
+        text: '報價於上述期限內有效。如需調整方案內容或安排線上說明，歡迎隨時與我聯繫。',
+      },
+      { kind: 'cta', text: '檢視完整報價單' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+  {
+    k: 'proposal_followup',
+    name: '提案後跟進',
+    cat: 'sales',
+    icon: 'chat',
+    on: true,
+    used: '5 天前',
+    from: '業務負責人 <{{User.Email}}>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '關於 {{Opportunity.Name}} 提案的後續',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '很高興日前能向 {{Account.Name}} 團隊介紹我們的解決方案。想跟進了解貴司內部評估的進度，以及是否還有任何我能協助釐清的地方。',
+      },
+      {
+        kind: 'p',
+        text: '若方便的話，我們可安排一場 30 分鐘的線上會議，針對導入時程與投資報酬進一步討論。',
+      },
+      { kind: 'cta', text: '安排線上會議' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+  {
+    k: 'won_notify',
+    name: '贏單恭賀通知',
+    cat: 'sales',
+    icon: 'trophy',
+    on: true,
+    used: '1 週前',
+    from: 'CX CRM 團隊 <success@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '歡迎加入！感謝 {{Account.Name}} 選擇 CX CRM',
+    body: [
+      { kind: 'greet', text: '親愛的 {{Contact.FirstName}}，' },
+      {
+        kind: 'p',
+        text: '恭喜！{{Account.Name}} 與 CX CRM 的合作正式啟動。您的專屬客戶成功經理將於一個工作天內與您聯繫，協助安排導入啟動會議。',
+      },
+      { kind: 'p', text: '我們非常期待與您一同推動業務數位化的下一步。' },
+      { kind: 'cta', text: '查看導入指南' },
+      {
+        kind: 'sig',
+        sig: {
+          name: '{{Opportunity.Owner}}',
+          title: '業務負責人｜CX CRM',
+          phone: '{{User.Phone}}',
+        },
+      },
+    ],
+  },
+  {
+    k: 'onboarding_welcome',
+    name: '導入歡迎信',
+    cat: 'cs',
+    icon: 'welcome',
+    on: true,
+    used: '3 天前',
+    from: '客戶成功 <success@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '歡迎啟用 CX CRM，{{Contact.FirstName}}！',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，歡迎加入 CX CRM 🎉' },
+      {
+        kind: 'p',
+        text: '您的帳號已開通。為了讓 {{Account.Name}} 團隊更快上手，我們準備了一份導入清單，協助您在第一週完成基本設定與資料匯入。',
+      },
+      { kind: 'p', text: '有任何問題，您的客戶成功經理 {{User.Name}} 隨時為您服務。' },
+      { kind: 'cta', text: '開始導入設定' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+  {
+    k: 'renewal_reminder',
+    name: '續約到期提醒',
+    cat: 'cs',
+    icon: 'refresh',
+    on: true,
+    used: '昨天',
+    from: '客戶成功 <success@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '{{Account.Name}} 的服務將於 {{Contract.EndDate}} 到期',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '提醒您，{{Account.Name}} 目前的服務合約將於 {{Contract.EndDate}} 到期。為確保服務不中斷，建議於到期前完成續約確認。',
+      },
+      {
+        kind: 'quote',
+        rows: [
+          ['合約方案', '{{Contract.Name}}'],
+          ['到期日', '{{Contract.EndDate}}'],
+        ],
+        total: ['續約金額', '{{Contract.RenewalAmount}}'],
+      },
+      { kind: 'cta', text: '確認續約方案' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+  {
+    k: 'case_created',
+    name: '案件已建立通知',
+    cat: 'service',
+    icon: 'ticket',
+    on: true,
+    used: '4 小時前',
+    from: '客服中心 <support@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '您的服務案件 {{Case.Number}} 已建立',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '我們已收到您的請求，案件編號為 {{Case.Number}}。客服團隊將於服務時間內盡快與您聯繫，目前優先等級為 {{Case.Priority}}。',
+      },
+      { kind: 'p', text: '您可隨時透過下方連結追蹤處理進度。' },
+      { kind: 'cta', text: '查看案件狀態' },
+      {
+        kind: 'sig',
+        sig: {
+          name: 'CX CRM 客服中心',
+          title: '服務時間 週一至週五 09:00–18:00',
+          phone: '0800-000-000',
+        },
+      },
+    ],
+  },
+  {
+    k: 'case_resolved',
+    name: '案件已解決通知',
+    cat: 'service',
+    icon: 'checkc',
+    on: true,
+    used: '1 天前',
+    from: '客服中心 <support@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '案件 {{Case.Number}} 已解決',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '您的案件 {{Case.Number}} 已處理完成並關閉。若問題仍未解決，您可在 7 天內回覆此通知重新開啟案件。',
+      },
+      { kind: 'p', text: '我們很重視您的回饋，誠摯邀請您給予本次服務評分。' },
+      { kind: 'cta', text: '填寫滿意度調查' },
+      {
+        kind: 'sig',
+        sig: { name: 'CX CRM 客服中心', title: '感謝您的耐心與配合', phone: '0800-000-000' },
+      },
+    ],
+  },
+  {
+    k: 'event_invite',
+    name: '活動邀請',
+    cat: 'mkt',
+    icon: 'calendar',
+    on: true,
+    used: '2 週前',
+    from: '行銷團隊 <events@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '邀請您參加 {{Campaign.Name}}',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '誠摯邀請您參加 {{Campaign.Name}}。本次活動將分享產業最佳實務與產品最新藍圖，名額有限，敬請及早報名。',
+      },
+      {
+        kind: 'quote',
+        rows: [
+          ['日期', '{{Campaign.StartDate}}'],
+          ['地點', '{{Campaign.Location}}'],
+        ],
+        total: ['報名費用', '免費'],
+      },
+      { kind: 'cta', text: '立即報名' },
+      {
+        kind: 'sig',
+        sig: { name: 'CX CRM 行銷團隊', title: '期待與您相見', phone: 'events@cxcrm.com' },
+      },
+    ],
+  },
+  {
+    k: 'approval_notify',
+    name: '審核待辦通知',
+    cat: 'sys',
+    icon: 'gavel',
+    on: true,
+    used: '30 分鐘前',
+    from: 'CX CRM 系統 <no-reply@cxcrm.com>',
+    to: '{{Approver.Email}}',
+    lang: '繁體中文',
+    subj: '待您審核：{{Quote.Name}}（折扣 {{Quote.Discount}}）',
+    body: [
+      { kind: 'greet', text: '{{Approver.Name}} 您好，' },
+      {
+        kind: 'p',
+        text: '有一筆報價需要您的審核。由 {{User.Name}} 提交，因折扣 {{Quote.Discount}} 超過該角色上限，已自動送出至您的待審清單。',
+      },
+      {
+        kind: 'quote',
+        rows: [
+          ['商機', '{{Opportunity.Name}}'],
+          ['提交人', '{{User.Name}}'],
+          ['折扣', '{{Quote.Discount}}'],
+        ],
+        total: ['報價金額', '{{Quote.TotalAmount}}'],
+      },
+      { kind: 'cta', text: '前往審核' },
+      {
+        kind: 'sig',
+        sig: { name: 'CX CRM 系統通知', title: '此為自動發送，請勿直接回覆', phone: '' },
+      },
+    ],
+  },
+  {
+    k: 'newsletter',
+    name: '月度電子報',
+    cat: 'mkt',
+    icon: 'news',
+    on: false,
+    used: '1 個月前',
+    from: '行銷團隊 <news@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: 'CX CRM 月報｜本月產品更新與客戶案例',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '這是本月的 CX CRM 月報，為您整理產品新功能、實用技巧與精選客戶成功案例。',
+      },
+      { kind: 'cta', text: '閱讀本期月報' },
+      { kind: 'sig', sig: { name: 'CX CRM 行銷團隊', title: '每月一封，與您分享', phone: '' } },
+    ],
+  },
+  {
+    k: 'qbr_invite',
+    name: 'QBR 季度回顧邀約',
+    cat: 'cs',
+    icon: 'calendar',
+    on: false,
+    used: '未使用',
+    from: '客戶成功 <success@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '邀請 {{Account.Name}} 進行季度業務回顧（QBR）',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '又到了季度業務回顧的時間。想與 {{Account.Name}} 團隊一同檢視本季成效、使用狀況與下一季的目標規劃。',
+      },
+      { kind: 'cta', text: '預約 QBR 時段' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+  {
+    k: 'win_back',
+    name: '沉睡客戶喚回',
+    cat: 'cs',
+    icon: 'back',
+    on: false,
+    used: '未使用',
+    from: '客戶成功 <success@cxcrm.com>',
+    to: '{{Contact.Email}}',
+    lang: '繁體中文',
+    subj: '我們想念您，{{Contact.FirstName}}',
+    body: [
+      { kind: 'greet', text: '{{Contact.FirstName}} 您好，' },
+      {
+        kind: 'p',
+        text: '注意到 {{Account.Name}} 近期較少使用 CX CRM。若有任何使用上的困難或需求變化，我們很樂意協助，也準備了專屬方案歡迎您回來。',
+      },
+      { kind: 'cta', text: '與我們聊聊' },
+      { kind: 'sig', sig: SIG },
+    ],
+  },
+];
+
+export const EMAIL_MERGE: EmailMergeGroup[] = [
+  {
+    g: '商機 Opportunity',
+    f: [
+      '{{Opportunity.Name}}',
+      '{{Opportunity.Amount}}',
+      '{{Opportunity.StageName}}',
+      '{{Opportunity.CloseDate}}',
+      '{{Opportunity.Owner}}',
+    ],
+  },
+  { g: '客戶帳號 Account', f: ['{{Account.Name}}', '{{Account.Industry}}', '{{Account.Owner}}'] },
+  {
+    g: '聯絡人 Contact',
+    f: ['{{Contact.FirstName}}', '{{Contact.LastName}}', '{{Contact.Email}}', '{{Contact.Title}}'],
+  },
+  {
+    g: '報價單 Quote',
+    f: [
+      '{{Quote.Name}}',
+      '{{Quote.TotalAmount}}',
+      '{{Quote.ExpirationDate}}',
+      '{{Quote.Discount}}',
+    ],
+  },
+  { g: '使用者 User', f: ['{{User.Name}}', '{{User.Title}}', '{{User.Phone}}', '{{User.Email}}'] },
+];
+
+export const PL_OBJECTS = [
+  '商機 Opportunity',
+  '客戶帳號 Account',
+  '報價單 Quote__c',
+  '聯絡人 Contact',
+];
+
+export const PL_PILLS: Record<string, string[]> = {
+  '商機 Opportunity': ['商機 — 業務版面', '商機 — 主管版面'],
+  '客戶帳號 Account': ['客戶帳號 — 標準版面'],
+  '報價單 Quote__c': ['報價單 — 審核版面'],
+  '聯絡人 Contact': ['聯絡人 — 標準版面'],
+};
+
+export const PL_PALETTE: Record<PLPaletteTab, PLPaletteGroup[]> = {
+  fields: [
+    {
+      g: '標準欄位',
+      items: [
+        { n: '競爭對手', t: '文字(80)' },
+        { n: '下一步行動', t: '文字(120)' },
+        { n: '損失原因', t: '選項清單' },
+        { n: '付款條件', t: '選項清單' },
+        { n: '折扣率', t: '百分比' },
+        { n: '回報關係', t: '查詢' },
+      ],
+    },
+    {
+      g: '自訂欄位',
+      items: [
+        { n: '產業別', t: '選項清單', c: 'violet' },
+        { n: '採購窗口', t: '查詢', c: 'violet' },
+        { n: '合約編號', t: '文字(40)', c: 'violet' },
+        { n: 'PoC 完成', t: '核取方塊', c: 'violet' },
+      ],
+    },
+  ],
+  buttons: [
+    {
+      g: '標準按鈕',
+      items: [
+        { n: '編輯', t: 'Standard', c: 'blue' },
+        { n: '刪除', t: 'Standard', c: 'blue' },
+        { n: '複製', t: 'Standard', c: 'blue' },
+        { n: '變更負責人', t: 'Standard', c: 'blue' },
+        { n: '送出審核', t: 'Standard', c: 'blue' },
+      ],
+    },
+    {
+      g: '自訂按鈕',
+      items: [
+        { n: '產生報價', t: 'Flow', c: 'green' },
+        { n: '同步至 ERP', t: 'Apex', c: 'orange' },
+        { n: '排程 QBR', t: 'URL', c: 'cyan' },
+      ],
+    },
+  ],
+  related: [
+    {
+      g: '可用相關清單',
+      items: [
+        { n: '聯絡角色', t: 'OpportunityContactRole', c: 'cyan' },
+        { n: '產品明細', t: 'OpportunityLineItem', c: 'green' },
+        { n: '報價單', t: 'Quote', c: 'orange' },
+        { n: '活動', t: 'ActivityHistory', c: 'violet' },
+        { n: '附件', t: 'ContentDocument', c: 'blue' },
+        { n: '核准歷程', t: 'ProcessInstance', c: 'pink' },
+      ],
+    },
+  ],
+};
+
+export const PL_SECTIONS_INIT: PLSection[] = [
+  {
+    t: '重點資訊',
+    cols: 2,
+    fields: [
+      { n: '商機名稱', t: '文字(120)', req: true },
+      { n: '客戶帳號', t: '查詢 · Account', req: true },
+      { n: '金額', t: '貨幣' },
+      { n: '階段', t: '選項清單', req: true },
+      { n: '預計成交日', t: '日期' },
+      { n: '成交機率', t: '百分比' },
+    ],
+  },
+  {
+    t: '詳細資訊',
+    cols: 2,
+    fields: [
+      { n: '負責業務', t: '查詢 · User' },
+      { n: '商機來源', t: '選項清單' },
+      { n: '產品線', t: '選項清單' },
+      { n: '預算狀態', t: '選項清單' },
+      { n: '描述', t: '長文字', full: true },
+      { empty: true },
+    ],
+  },
+  {
+    t: '系統資訊',
+    cols: 2,
+    collapsed: true,
+    fields: [
+      { n: '建立者', t: '唯讀' },
+      { n: '建立日期', t: '唯讀' },
+      { n: '最後修改者', t: '唯讀' },
+      { n: '最後修改日期', t: '唯讀' },
+    ],
+  },
+];
+
+export const PL_REL: PLRelCard[] = [
+  { n: '聯絡角色', s: '3 筆', c: 'cyan' },
+  { n: '產品明細', s: '5 筆', c: 'green' },
+  { n: '報價單', s: '2 筆', c: 'orange' },
+  { n: '活動', s: '8 筆', c: 'violet' },
+];
+
+export const PL_ASSIGNED = 6;
+export const PL_UNASSIGNED = 1;
