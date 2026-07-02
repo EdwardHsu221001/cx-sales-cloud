@@ -86,3 +86,21 @@ export interface BatchItem {
 export type ImpErrEntry = { row: number; id: string; reason: string };
 export type MapRow = [string, string, string, 'ok' | 'skip'];
 export type ImpRecEntry = { id: string; name: string; status: 'ok' | 'skip' | 'err'; note?: string };
+
+export interface ProfileData {
+  name: string;
+  users: number;
+  license: string;
+  lic: string;
+  access: string;
+  sys: string[];
+  desc: string;
+}
+export interface PermSetData {
+  name: string;
+  type: string;
+  typeL: string;
+  users: number;
+  desc: string;
+  perms: [string, string, boolean][];
+}

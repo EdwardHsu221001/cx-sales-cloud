@@ -13,6 +13,8 @@ import type {
   ImpErrEntry,
   MapRow,
   ImpRecEntry,
+  ProfileData,
+  PermSetData,
 } from './settings.types';
 
 import type { EmailCategory, EmailSig, EmailTemplate, EmailMergeGroup } from './email.utils';
@@ -1303,3 +1305,135 @@ export const PL_REL: PLRelCard[] = [
 
 export const PL_ASSIGNED = 6;
 export const PL_UNASSIGNED = 1;
+
+// Profile 管理面板與 DetailDrawer（ProfileContent）共用的假資料。
+export const PROFILES: ProfileData[] = [
+  {
+    name: '系統管理員',
+    users: 2,
+    license: 'Salesforce',
+    lic: 'sf',
+    access: 'full',
+    sys: ['管理使用者', '修改所有資料', '檢視設定與組態', '管理 Permission Set'],
+    desc: '完整系統存取與設定權限，僅供 IT 與系統管理人員使用。',
+  },
+  {
+    name: '業務經理',
+    users: 3,
+    license: 'Salesforce',
+    lic: 'sf',
+    access: 'rw',
+    sys: ['檢視團隊所有商機', '匯出報表', '管理預測', '轉移擁有權'],
+    desc: '可讀寫團隊資料、檢視報表與業績預測，管理下屬商機。',
+  },
+  {
+    name: '標準業務',
+    users: 8,
+    license: 'Salesforce',
+    lic: 'sf',
+    access: 'std',
+    sys: ['建立與編輯自有紀錄', '記錄活動', '使用清單檢視'],
+    desc: '業務代表預設 Profile，可讀寫自有客戶與商機。',
+  },
+  {
+    name: '業務支援',
+    users: 4,
+    license: 'Salesforce',
+    lic: 'sf',
+    access: 'support',
+    sys: ['存取知識庫', '記錄個案活動', '檢視帳號'],
+    desc: '內勤支援角色，以個案、活動與知識庫為主。',
+  },
+  {
+    name: '唯讀稽核',
+    users: 2,
+    license: 'Salesforce Platform',
+    lic: 'platform',
+    access: 'ro',
+    sys: ['檢視所有資料', '匯出報表'],
+    desc: '全物件唯讀，供稽核與財務查核使用，無寫入權限。',
+  },
+];
+
+// Permission Set 指派面板與 DetailDrawer（PermSetContent）共用的假資料。
+export const PERMSETS: PermSetData[] = [
+  {
+    name: '報表匯出',
+    type: 'func',
+    typeL: '功能',
+    users: 12,
+    desc: '允許將報表與清單檢視匯出為 CSV / Excel。',
+    perms: [
+      ['匯出報表', '將報表結果下載為檔案', true],
+      ['匯出清單檢視', '下載清單檢視資料', true],
+      ['排程報表寄送', '定期以 Email 寄送報表', false],
+    ],
+  },
+  {
+    name: '商機刪除',
+    type: 'obj',
+    typeL: '物件',
+    users: 4,
+    desc: '授予商機物件的刪除權限（預設 Profile 不含）。',
+    perms: [
+      ['刪除商機', '刪除自有與團隊商機', true],
+      ['大量刪除', '於清單檢視批次刪除', false],
+    ],
+  },
+  {
+    name: 'API 存取',
+    type: 'sys',
+    typeL: '系統',
+    users: 3,
+    desc: '啟用 REST / Bulk API 與已連接的應用程式。',
+    perms: [
+      ['API 已啟用', '透過 REST / SOAP 存取資料', true],
+      ['Bulk API', '大量資料批次處理', true],
+      ['管理已連接應用程式', 'OAuth 連線管理', false],
+    ],
+  },
+  {
+    name: '大量匯入精靈',
+    type: 'data',
+    typeL: '資料',
+    users: 5,
+    desc: '使用資料匯入精靈批次建立 / 更新紀錄。',
+    perms: [
+      ['匯入個人紀錄', '匯入自有物件資料', true],
+      ['匯入所有資料', '跨擁有者匯入', false],
+    ],
+  },
+  {
+    name: 'Cisco 整合',
+    type: 'intg',
+    typeL: '整合',
+    users: 2,
+    desc: '存取 Cisco Webex / CUCM 通話紀錄同步與點擊撥號。',
+    perms: [
+      ['通話紀錄同步', '自 CUCM 同步通話歷程', true],
+      ['點擊撥號 (Click-to-Dial)', '於紀錄頁一鍵撥號', true],
+      ['Webex 會議建立', '於商機建立 Webex 會議', true],
+    ],
+  },
+  {
+    name: '行銷活動管理',
+    type: 'func',
+    typeL: '功能',
+    users: 6,
+    desc: '建立與管理行銷活動及其成員名單。',
+    perms: [
+      ['管理行銷活動', '建立 / 編輯行銷活動', true],
+      ['新增行銷活動成員', '加入聯絡人 / 潛客', true],
+    ],
+  },
+];
+
+// 各 Permission Set 已指派的使用者索引（對應 USERS）。
+export const PERM_ASSIGNED: Record<string, number[]> = {
+  報表匯出: [0, 1, 2, 3, 4],
+  商機刪除: [0, 1],
+  'API 存取': [1, 2],
+  大量匯入精靈: [1, 3],
+  'Cisco 整合': [1, 6],
+  行銷活動管理: [2, 3],
+};
