@@ -104,3 +104,20 @@ export interface PermSetData {
   desc: string;
   perms: [string, string, boolean][];
 }
+
+export interface ObjItem {
+  nm: string;
+  api: string;
+  icon: string;
+  g: string;
+  records: number;
+  fields: number;
+  std: boolean;
+  customFields: number;
+}
+export interface FieldRow {
+  label: string;
+  api: string;
+  type: string;
+  status: 'STANDARD' | 'CUSTOM';
+}

@@ -2,7 +2,6 @@
 
 import { useState, useCallback, Fragment } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { IconSearch } from '../common/icons';
 import {
   ChevRight,
   ChevLeft,
@@ -33,6 +32,7 @@ import {
   PERMSETS,
   PERM_ASSIGNED,
   STATUS_MAP,
+  OBJ_ITEMS,
 } from './settings.data';
 import { NAV_GROUPS } from './settings.nav';
 import { StatusBadge } from './settings.components';
@@ -57,6 +57,8 @@ import ProfilesPanel from './profiles/ProfilesPanel';
 import PermSetsPanel from './permsets/PermSetsPanel';
 import PlaceholderPanel from './placeholder/PlaceholderPanel';
 import UsersPanel from './users/UsersPanel';
+import ObjectsPanel from './objects/ObjectsPanel';
+import FieldsPanel from './fields/FieldsPanel';
 
 const OBJECTS = [
   { nm: '客戶帳號', api: 'Account' },
@@ -93,175 +95,6 @@ const ACCESS: Record<string, boolean[][]> = {
     [1, 0, 0, 0],
   ].map((r) => r.map(Boolean)),
   ro: OBJECTS.map(() => [true, false, false, false]),
-};
-
-// ── Object Manager Data ───────────────────────────────────────────────────────
-const OBJ_ICON_STYLE: Record<string, { bg: string; color: string }> = {
-  blue: { bg: 'var(--cx-accent-soft)', color: 'var(--cx-accent)' },
-  green: { bg: 'var(--cx-success-soft)', color: '#059669' },
-  violet: { bg: '#EDE9FE', color: '#6d28d9' },
-  amber: { bg: '#FEF3C7', color: '#b45309' },
-  cyan: { bg: '#E0F2FE', color: '#0369a1' },
-  teal: { bg: '#CCFBF1', color: '#0d9488' },
-};
-
-interface ObjItem {
-  nm: string;
-  api: string;
-  icon: string;
-  g: string;
-  records: number;
-  fields: number;
-  std: boolean;
-  customFields: number;
-}
-const OBJ_ITEMS: ObjItem[] = [
-  {
-    nm: '客戶帳號',
-    api: 'Account',
-    icon: '帳',
-    g: 'blue',
-    records: 1248,
-    fields: 148,
-    std: true,
-    customFields: 12,
-  },
-  {
-    nm: '聯絡人',
-    api: 'Contact',
-    icon: '聯',
-    g: 'green',
-    records: 3902,
-    fields: 62,
-    std: true,
-    customFields: 5,
-  },
-  {
-    nm: '商機',
-    api: 'Opportunity',
-    icon: '機',
-    g: 'violet',
-    records: 846,
-    fields: 54,
-    std: true,
-    customFields: 8,
-  },
-  {
-    nm: '潛在客戶',
-    api: 'Lead',
-    icon: '潛',
-    g: 'amber',
-    records: 312,
-    fields: 43,
-    std: true,
-    customFields: 3,
-  },
-  {
-    nm: '報價單',
-    api: 'Quote__c',
-    icon: '報',
-    g: 'cyan',
-    records: 1205,
-    fields: 28,
-    std: false,
-    customFields: 28,
-  },
-  {
-    nm: '服務合約',
-    api: 'ServiceContract__c',
-    icon: '約',
-    g: 'teal',
-    records: 420,
-    fields: 22,
-    std: false,
-    customFields: 22,
-  },
-];
-
-interface FieldRow {
-  label: string;
-  api: string;
-  type: string;
-  status: 'STANDARD' | 'CUSTOM';
-}
-const FIELDS_DATA: Record<string, { total: number; custom: number; rows: FieldRow[] }> = {
-  Account: {
-    total: 148,
-    custom: 12,
-    rows: [
-      { label: 'Account Name', api: 'Name', type: 'Text(255)', status: 'STANDARD' },
-      { label: 'Industry', api: 'Industry', type: 'Picklist', status: 'STANDARD' },
-      { label: 'SLA Expiration Date', api: 'SLAExpirationDate__c', type: 'Date', status: 'CUSTOM' },
-      { label: 'Tier Level', api: 'TierLevel__c', type: 'Picklist (Multi)', status: 'CUSTOM' },
-      { label: 'Total Value', api: 'TotalValue__c', type: 'Currency(16,2)', status: 'CUSTOM' },
-      { label: 'Website', api: 'Website', type: 'URL', status: 'STANDARD' },
-    ],
-  },
-  Contact: {
-    total: 62,
-    custom: 5,
-    rows: [
-      { label: 'First Name', api: 'FirstName', type: 'Text(40)', status: 'STANDARD' },
-      { label: 'Last Name', api: 'LastName', type: 'Text(80)', status: 'STANDARD' },
-      { label: 'Email', api: 'Email', type: 'Email', status: 'STANDARD' },
-      { label: 'Phone', api: 'Phone', type: 'Phone', status: 'STANDARD' },
-      { label: 'LINE ID', api: 'LINE_ID__c', type: 'Text(100)', status: 'CUSTOM' },
-      { label: 'Priority', api: 'Priority__c', type: 'Picklist', status: 'CUSTOM' },
-    ],
-  },
-  Opportunity: {
-    total: 54,
-    custom: 8,
-    rows: [
-      { label: 'Opportunity Name', api: 'Name', type: 'Text(120)', status: 'STANDARD' },
-      { label: 'Amount', api: 'Amount', type: 'Currency', status: 'STANDARD' },
-      { label: 'Stage', api: 'StageName', type: 'Picklist', status: 'STANDARD' },
-      { label: 'Close Date', api: 'CloseDate', type: 'Date', status: 'STANDARD' },
-      { label: 'Discount', api: 'Discount__c', type: 'Percent(0–100)', status: 'CUSTOM' },
-      { label: 'Cisco Call ID', api: 'CiscoCallId__c', type: 'Text(64)', status: 'CUSTOM' },
-    ],
-  },
-  Lead: {
-    total: 43,
-    custom: 3,
-    rows: [
-      { label: 'First Name', api: 'FirstName', type: 'Text(40)', status: 'STANDARD' },
-      { label: 'Last Name', api: 'LastName', type: 'Text(80)', status: 'STANDARD' },
-      { label: 'Company', api: 'Company', type: 'Text(255)', status: 'STANDARD' },
-      { label: 'Status', api: 'Status', type: 'Picklist', status: 'STANDARD' },
-      { label: 'Lead Source', api: 'LeadSource', type: 'Picklist', status: 'STANDARD' },
-      { label: 'Score', api: 'Score__c', type: 'Number(3,0)', status: 'CUSTOM' },
-    ],
-  },
-  Quote__c: {
-    total: 28,
-    custom: 28,
-    rows: [
-      { label: 'Quote Name', api: 'Name', type: 'Auto Number', status: 'STANDARD' },
-      { label: 'Status', api: 'Status__c', type: 'Picklist', status: 'CUSTOM' },
-      { label: 'Total Amount', api: 'TotalAmount__c', type: 'Currency(16,2)', status: 'CUSTOM' },
-      { label: 'Discount', api: 'Discount__c', type: 'Percent(0–100)', status: 'CUSTOM' },
-      { label: 'Valid Until', api: 'ValidUntil__c', type: 'Date', status: 'CUSTOM' },
-      { label: 'Approval Status', api: 'ApprovalStatus__c', type: 'Picklist', status: 'CUSTOM' },
-    ],
-  },
-  ServiceContract__c: {
-    total: 22,
-    custom: 22,
-    rows: [
-      { label: 'Contract Name', api: 'Name', type: 'Auto Number', status: 'STANDARD' },
-      { label: 'Status', api: 'Status__c', type: 'Picklist', status: 'CUSTOM' },
-      { label: 'Start Date', api: 'StartDate__c', type: 'Date', status: 'CUSTOM' },
-      { label: 'End Date', api: 'EndDate__c', type: 'Date', status: 'CUSTOM' },
-      {
-        label: 'Contract Value',
-        api: 'ContractValue__c',
-        type: 'Currency(16,2)',
-        status: 'CUSTOM',
-      },
-      { label: 'Auto Renew', api: 'AutoRenew__c', type: 'Checkbox', status: 'CUSTOM' },
-    ],
-  },
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -2114,9 +1947,6 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
     tab: 'overview',
   });
   const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({});
-  const [objTab, setObjTab] = useState<'std' | 'custom'>('std');
-  const [fieldTab, setFieldTab] = useState('fields');
-  const [fieldSearch, setFieldSearch] = useState('');
 
   const [flowOn, setFlowOn] = useState<Record<number, boolean>>(() =>
     Object.fromEntries(FLOWS.map((f, i) => [i, f.on]))
@@ -2184,319 +2014,6 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
     },
     [batchOn]
   );
-
-  // ── Objects panel ─────────────────────────────────────────────────────────
-  function ObjectsPanel() {
-    const filtered = OBJ_ITEMS.filter((o) => (objTab === 'std' ? o.std : !o.std));
-    const stdCount = OBJ_ITEMS.filter((o) => o.std).length;
-    const cusCount = OBJ_ITEMS.filter((o) => !o.std).length;
-
-    return (
-      <div>
-        <div className="cx-crumbs">
-          <a onClick={() => setActiveTab('hub')}>設定</a>
-          <ChevRight />
-          <span>物件與欄位</span>
-          <ChevRight />
-          <span>物件管理員</span>
-        </div>
-        <div className="cx-set-head">
-          <div>
-            <h1>物件管理員</h1>
-            <div className="sub">管理標準與自訂物件 — 定義欄位、頁面版面、觸發程序與驗證規則。</div>
-          </div>
-          <div className="actions">
-            <button className="cx-btn-navy" onClick={() => showToast('已開啟「新增自訂物件」精靈')}>
-              <PlusIcon />
-              新增自訂物件
-            </button>
-          </div>
-        </div>
-
-        <div className="cx-seg" style={{ marginBottom: 18 }}>
-          <button className={objTab === 'std' ? 'on' : ''} onClick={() => setObjTab('std')}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <ellipse cx="12" cy="5" rx="8" ry="3" />
-              <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
-              <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
-            </svg>
-            標準物件
-            <span style={{ fontSize: 11, opacity: 0.6, marginLeft: 2 }}>({stdCount})</span>
-          </button>
-          <button className={objTab === 'custom' ? 'on' : ''} onClick={() => setObjTab('custom')}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" />
-              <path d="M8 21h8M12 17v4" />
-            </svg>
-            自訂物件
-            <span style={{ fontSize: 11, opacity: 0.6, marginLeft: 2 }}>({cusCount})</span>
-          </button>
-        </div>
-
-        <div className="cx-data-card">
-          <table className="cx-dt">
-            <colgroup>
-              <col />
-              <col />
-              <col />
-              <col />
-              <col />
-              <col style={{ width: 48 }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>物件</th>
-                <th>API Name</th>
-                <th>類型</th>
-                <th>紀錄數</th>
-                <th>欄位</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((obj) => {
-                const ic = OBJ_ICON_STYLE[obj.g];
-                return (
-                  <tr key={obj.api} onClick={() => router.push(`/settings/objects/${obj.api}`)}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                        <div
-                          className="cx-omgmt-icon"
-                          style={{
-                            background: ic.bg,
-                            color: ic.color,
-                            width: 36,
-                            height: 36,
-                            borderRadius: 10,
-                            fontSize: 13,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {obj.icon}
-                        </div>
-                        <div style={{ fontWeight: 500, fontSize: 13 }}>{obj.nm}</div>
-                      </div>
-                    </td>
-                    <td
-                      style={{
-                        fontFamily: 'monospace',
-                        fontSize: 11.5,
-                        color: 'var(--cx-text-sub)',
-                      }}
-                    >
-                      {obj.api}
-                    </td>
-                    <td>
-                      <span className={`cx-tag-inline${!obj.std ? ' custom' : ''}`}>
-                        {obj.std ? '標準' : '自訂'}
-                      </span>
-                    </td>
-                    <td style={{ color: 'var(--cx-text-sub)' }}>{obj.records.toLocaleString()}</td>
-                    <td style={{ color: 'var(--cx-text-sub)', fontSize: 12.5 }}>
-                      {obj.fields} 個
-                      {obj.customFields > 0 && (
-                        <span style={{ color: 'var(--cx-text-faint)', marginLeft: 4 }}>
-                          ({obj.customFields} 自訂)
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="cx-row-arr">
-                        <ChevRight />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <div className="cx-pager">
-            <div className="info">
-              共 <b>{filtered.length}</b> 個{objTab === 'std' ? '標準' : '自訂'}物件
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Fields panel ───────────────────────────────────────────────────────────
-  function FieldsPanel() {
-    const obj = OBJ_ITEMS.find((o) => o.api === selectedObjApi) ?? OBJ_ITEMS[0];
-    const fd = FIELDS_DATA[obj.api] ?? { total: obj.fields, custom: obj.customFields, rows: [] };
-    const ic = OBJ_ICON_STYLE[obj.g];
-
-    const filteredRows = fd.rows.filter(
-      (r) =>
-        !fieldSearch ||
-        r.label.toLowerCase().includes(fieldSearch.toLowerCase()) ||
-        r.api.toLowerCase().includes(fieldSearch.toLowerCase())
-    );
-
-    return (
-      <div>
-        {/* 麵包屑 */}
-        <div className="cx-crumbs">
-          <a onClick={() => setActiveTab('hub')}>設定</a>
-          <ChevRight />
-          <span>物件與欄位</span>
-          <ChevRight />
-          <a onClick={() => setActiveTab('objects')}>物件管理員</a>
-          <ChevRight />
-          <span>{obj.nm}</span>
-        </div>
-
-        {/* 標頭與動作按鈕 */}
-        <div className="cx-set-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div
-              className="cx-omgmt-icon"
-              style={{
-                background: ic.bg,
-                color: ic.color,
-                width: 46,
-                height: 46,
-                borderRadius: 13,
-                fontSize: 17,
-                flexShrink: 0,
-              }}
-            >
-              {obj.icon}
-            </div>
-            <div>
-              <h1 style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                {obj.nm}
-                <span style={{ fontSize: 14, color: 'var(--cx-text-faint)', fontWeight: 400 }}>
-                  ({obj.api})
-                </span>
-              </h1>
-              <div className="sub">管理 {obj.nm} 物件的欄位定義、資料類型與欄位層級安全性。</div>
-            </div>
-          </div>
-          <div className="actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <button
-              className="cx-btn-outline"
-              onClick={() => setActiveTab('objects')}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            >
-              <ChevLeft /> 物件管理員
-            </button>
-            <button className="cx-btn-navy" onClick={() => showToast('已開啟「新增欄位」精靈')}>
-              <PlusIcon />
-              新增欄位
-            </button>
-          </div>
-        </div>
-
-        {/* 篩選與搜尋列 */}
-        <div className="cx-filter-row">
-          <div className="cx-fsearch" style={{ flex: 1, maxWidth: 280 }}>
-            <IconSearch />
-            <input
-              type="text"
-              placeholder="篩選欄位名稱或 API…"
-              value={fieldSearch}
-              onChange={(e) => setFieldSearch(e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </div>
-          <div className="cx-filter-count">
-            共 <b>{filteredRows.length}</b> 個欄位
-          </div>
-        </div>
-
-        {/* 資料表格 */}
-        <div className="cx-data-card">
-          <table className="cx-dt">
-            <colgroup>
-              <col style={{ width: '28%' }} />
-              <col style={{ width: '28%' }} />
-              <col style={{ width: '22%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '8%' }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>欄位標籤</th>
-                <th>API 名稱</th>
-                <th>資料類型</th>
-                <th>類型</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRows.map((row) => (
-                <tr key={row.api} onClick={() => showToast(`開啟欄位：${row.label}`)}>
-                  <td style={{ fontWeight: 500, color: 'var(--cx-accent)', cursor: 'pointer' }}>
-                    {row.label}
-                  </td>
-                  <td
-                    style={{ fontFamily: 'monospace', fontSize: 11.5, color: 'var(--cx-text-sub)' }}
-                  >
-                    {row.api}
-                  </td>
-                  <td style={{ color: 'var(--cx-text-sub)', fontSize: 12.5 }}>{row.type}</td>
-                  <td>
-                    <span
-                      className={`cx-field-status ${row.status === 'CUSTOM' ? 'custom' : 'std'}`}
-                    >
-                      {row.status === 'CUSTOM' ? '自訂' : '標準'}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: 'var(--cx-accent)',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        showToast(`編輯欄位：${row.label}`);
-                      }}
-                    >
-                      Edit
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {filteredRows.length === 0 && (
-                <tr className="no-hover">
-                  <td
-                    colSpan={5}
-                    style={{
-                      textAlign: 'center',
-                      padding: '28px 0',
-                      color: 'var(--cx-text-faint)',
-                      fontSize: 13,
-                    }}
-                  >
-                    找不到符合的欄位
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-
-          {/* 分頁器 */}
-          <div className="cx-pager">
-            <div className="info">
-              顯示 <b>1–{filteredRows.length}</b>，共 <b>{fd.total}</b> 個欄位
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button className="cx-pg nav" disabled>
-                <ChevLeft />
-              </button>
-              <button className="cx-pg nav" onClick={() => showToast('下一頁')}>
-                <ChevRight />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // ── Render ────────────────────────────────────────────────────────────────
   const isFullPanel = [
@@ -2584,8 +2101,20 @@ export default function Settings({ showToast }: { showToast: (msg: string) => vo
             {activeTab === 'discount' && (
               <DiscountPanel showToast={showToast} onNavigate={setActiveTab} />
             )}
-            {activeTab === 'objects' && <ObjectsPanel />}
-            {activeTab === 'fields' && <FieldsPanel />}
+            {activeTab === 'objects' && (
+              <ObjectsPanel
+                showToast={showToast}
+                onNavigate={setActiveTab}
+                onOpenObject={(api) => router.push(`/settings/objects/${api}`)}
+              />
+            )}
+            {activeTab === 'fields' && (
+              <FieldsPanel
+                showToast={showToast}
+                onNavigate={setActiveTab}
+                selectedObjApi={selectedObjApi}
+              />
+            )}
             {activeTab === 'flow' && (
               <FlowPanel
                 showToast={showToast}

@@ -15,10 +15,85 @@ import type {
   ImpRecEntry,
   ProfileData,
   PermSetData,
+  ObjItem,
 } from './settings.types';
 
 import type { EmailCategory, EmailSig, EmailTemplate, EmailMergeGroup } from './email.utils';
 import type { PLPaletteTab, PLPaletteGroup, PLSection, PLRelCard } from './pagelayout.utils';
+
+// 物件管理員圖示底色樣式（依 g 色鍵；ObjectsPanel 與 FieldsPanel 共用）。
+export const OBJ_ICON_STYLE: Record<string, { bg: string; color: string }> = {
+  blue: { bg: 'var(--cx-accent-soft)', color: 'var(--cx-accent)' },
+  green: { bg: 'var(--cx-success-soft)', color: '#059669' },
+  violet: { bg: '#EDE9FE', color: '#6d28d9' },
+  amber: { bg: '#FEF3C7', color: '#b45309' },
+  cyan: { bg: '#E0F2FE', color: '#0369a1' },
+  teal: { bg: '#CCFBF1', color: '#0d9488' },
+};
+
+// 物件管理員清單資料（shell setActiveTab、ObjectsPanel、FieldsPanel 共用）。
+export const OBJ_ITEMS: ObjItem[] = [
+  {
+    nm: '客戶帳號',
+    api: 'Account',
+    icon: '帳',
+    g: 'blue',
+    records: 1248,
+    fields: 148,
+    std: true,
+    customFields: 12,
+  },
+  {
+    nm: '聯絡人',
+    api: 'Contact',
+    icon: '聯',
+    g: 'green',
+    records: 3902,
+    fields: 62,
+    std: true,
+    customFields: 5,
+  },
+  {
+    nm: '商機',
+    api: 'Opportunity',
+    icon: '機',
+    g: 'violet',
+    records: 846,
+    fields: 54,
+    std: true,
+    customFields: 8,
+  },
+  {
+    nm: '潛在客戶',
+    api: 'Lead',
+    icon: '潛',
+    g: 'amber',
+    records: 312,
+    fields: 43,
+    std: true,
+    customFields: 3,
+  },
+  {
+    nm: '報價單',
+    api: 'Quote__c',
+    icon: '報',
+    g: 'cyan',
+    records: 1205,
+    fields: 28,
+    std: false,
+    customFields: 28,
+  },
+  {
+    nm: '服務合約',
+    api: 'ServiceContract__c',
+    icon: '約',
+    g: 'teal',
+    records: 420,
+    fields: 22,
+    std: false,
+    customFields: 22,
+  },
+];
 
 // 使用者/紀錄狀態 → CSS class 與顯示標籤（由 StatusBadge 與 shell 共用）。
 export const STATUS_MAP = {
