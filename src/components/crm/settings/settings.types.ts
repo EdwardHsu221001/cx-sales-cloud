@@ -121,3 +121,10 @@ export interface FieldRow {
   type: string;
   status: 'STANDARD' | 'CUSTOM';
 }
+
+export interface DrawerState {
+  open: boolean;
+  type: 'user' | 'profile' | 'permset' | 'flow' | 'batch';
+  index: number;
+  tab: string;
+}

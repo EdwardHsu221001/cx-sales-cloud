@@ -21,6 +21,44 @@ import type {
 import type { EmailCategory, EmailSig, EmailTemplate, EmailMergeGroup } from './email.utils';
 import type { PLPaletteTab, PLPaletteGroup, PLSection, PLRelCard } from './pagelayout.utils';
 
+// Profile 物件存取矩陣用的物件清單與各存取層級的權限格（DetailDrawer ProfileContent 用）。
+export const OBJECTS = [
+  { nm: '客戶帳號', api: 'Account' },
+  { nm: '聯絡人', api: 'Contact' },
+  { nm: '商機', api: 'Opportunity' },
+  { nm: '潛在客戶', api: 'Lead' },
+  { nm: '活動 / 任務', api: 'Activity' },
+  { nm: '報表', api: 'Report' },
+];
+export const ACCESS: Record<string, boolean[][]> = {
+  full: OBJECTS.map(() => [true, true, true, true]),
+  rw: [
+    [1, 1, 1, 1],
+    [1, 1, 1, 1],
+    [1, 1, 1, 1],
+    [1, 1, 1, 0],
+    [1, 1, 1, 1],
+    [1, 1, 1, 0],
+  ].map((r) => r.map(Boolean)),
+  std: [
+    [1, 1, 1, 0],
+    [1, 1, 1, 0],
+    [1, 1, 1, 0],
+    [1, 1, 1, 0],
+    [1, 1, 1, 0],
+    [1, 0, 0, 0],
+  ].map((r) => r.map(Boolean)),
+  support: [
+    [1, 0, 1, 0],
+    [1, 1, 1, 0],
+    [1, 0, 0, 0],
+    [1, 1, 1, 0],
+    [1, 1, 1, 0],
+    [1, 0, 0, 0],
+  ].map((r) => r.map(Boolean)),
+  ro: OBJECTS.map(() => [true, false, false, false]),
+};
+
 // 物件管理員圖示底色樣式（依 g 色鍵；ObjectsPanel 與 FieldsPanel 共用）。
 export const OBJ_ICON_STYLE: Record<string, { bg: string; color: string }> = {
   blue: { bg: 'var(--cx-accent-soft)', color: 'var(--cx-accent)' },
