@@ -42,3 +42,6 @@ next-env.d.ts
 
 # 根目錄的 HTML 設計稿/原型參考（不納入版控）
 /*.html
+
+# 帶讀教學本地筆記(不進版控)
+docs/learning-notes.local.md
