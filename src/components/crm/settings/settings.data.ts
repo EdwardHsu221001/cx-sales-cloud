@@ -20,6 +20,13 @@ import type {
 import type { EmailCategory, EmailSig, EmailTemplate, EmailMergeGroup } from './email.utils';
 import type { PLPaletteTab, PLPaletteGroup, PLSection, PLRelCard } from './pagelayout.utils';
 
+// 使用者/紀錄狀態 → CSS class 與顯示標籤（由 StatusBadge 與 shell 共用）。
+export const STATUS_MAP = {
+  active: { cls: 'active', lbl: '啟用中' },
+  inactive: { cls: 'inactive', lbl: '停用' },
+  pending: { cls: 'pending', lbl: '待啟用' },
+};
+
 // 頭像漸層底色（依 g 色鍵）。
 export const GRAD: Record<string, string> = {
   green: 'linear-gradient(135deg,#34D399,#10b981)',
